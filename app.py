@@ -370,11 +370,17 @@ def get_applications():
             # Talent sees pending_talent and can view history
             where_clause = "WHERE 1=1"
         elif 'director' in roles:
-            # Directors see their team's applications
+            # Directors see their direct reports' applications
+            # First get the director's name, then find their direct reports
             where_clause = f"""
                 WHERE employee_email IN (
-                    SELECT Email FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
-                    WHERE LOWER(Supervisor_Email) = LOWER('{email}')
+                    SELECT Email_Address FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
+                    WHERE Supervisor_Name__Unsecured_ = (
+                        SELECT CONCAT(First_Name, ' ', Last_Name)
+                        FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
+                        WHERE LOWER(Email_Address) = LOWER('{email}')
+                        LIMIT 1
+                    )
                 )
             """
         else:
