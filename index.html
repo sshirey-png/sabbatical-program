@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sabbatical Program - FirstLine Schools</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6B46C1;
+            --primary-dark: #553C9A;
+            --primary-light: #9F7AEA;
+            --gold: #D4AF37;
+            --gold-light: #F4E4BC;
+            --success: #10B981;
+            --success-light: #D1FAE5;
+            --warning: #F59E0B;
+            --warning-light: #FEF3C7;
+            --error: #EF4444;
+            --error-light: #FEE2E2;
+            --bg-cream: #FFFBEB;
+            --bg-white: #FFFFFF;
+            --text-dark: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-cream) 0%, #FFF7ED 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(107, 70, 193, 0.3);
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .header-title .subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-info {
+            text-align: right;
+            font-size: 0.875rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+        }
+
+        .user-roles {
+            opacity: 0.8;
+            font-size: 0.75rem;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            gap: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            color: var(--primary);
+        }
+
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .nav-tab .badge {
+            background: var(--error);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            margin-left: 0.5rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            color: var(--primary-dark);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 3rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 60%);
+            animation: shimmer 8s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hero h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .hero p {
+            opacity: 0.9;
+            position: relative;
+        }
+
+        .hero .gold-accent {
+            color: var(--gold);
+        }
+
+        /* Eligibility Banner */
+        .eligibility-banner {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .eligibility-banner.eligible {
+            background: linear-gradient(135deg, var(--success-light) 0%, #ECFDF5 100%);
+            border: 2px solid var(--success);
+        }
+
+        .eligibility-banner.not-eligible {
+            background: linear-gradient(135deg, var(--warning-light) 0%, #FFFBEB 100%);
+            border: 2px solid var(--warning);
+        }
+
+        .eligibility-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .eligibility-banner.eligible .eligibility-icon {
+            background: var(--success);
+            color: white;
+        }
+
+        .eligibility-banner.not-eligible .eligibility-icon {
+            background: var(--warning);
+            color: white;
+        }
+
+        .eligibility-text h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .eligibility-text p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Years Badge */
+        .years-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, var(--gold) 0%, #C4A033 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 8px rgba(212,175,55,0.4);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(107, 70, 193, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(107, 70, 193, 0.4);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-secondary {
+            background: var(--border);
+            color: var(--text-dark);
+        }
+
+        .btn-secondary:hover {
+            background: #D1D5DB;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, var(--gold) 0%, #C4A033 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(212,175,55,0.3);
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212,175,55,0.4);
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Application List */
+        .application-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .application-item {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            transition: all 0.2s;
+        }
+
+        .application-item:hover {
+            border-color: var(--primary-light);
+            box-shadow: 0 4px 15px rgba(107, 70, 193, 0.1);
+        }
+
+        .application-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .application-employee {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .application-meta {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.25rem;
+        }
+
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-pending_talent {
+            background: var(--warning-light);
+            color: #B45309;
+        }
+
+        .status-pending_hr {
+            background: #DBEAFE;
+            color: #1D4ED8;
+        }
+
+        .status-approved {
+            background: var(--success-light);
+            color: #047857;
+        }
+
+        .status-denied {
+            background: var(--error-light);
+            color: #B91C1C;
+        }
+
+        .status-withdrawn {
+            background: #F3F4F6;
+            color: var(--text-muted);
+        }
+
+        .application-dates {
+            display: flex;
+            gap: 2rem;
+            margin-top: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .application-dates span {
+            color: var(--text-muted);
+        }
+
+        .application-dates strong {
+            color: var(--text-dark);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .timeline-item.completed::before {
+            background: var(--success);
+            box-shadow: 0 0 0 2px var(--success);
+        }
+
+        .timeline-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .timeline-action {
+            font-weight: 500;
+        }
+
+        .timeline-notes {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Review Panel */
+        .review-panel {
+            background: #F9FAFB;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .review-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        /* Confetti */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(110vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 1rem;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-family: 'Playfair Display', serif;
+            color: var(--primary-dark);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        /* Conflict Warning */
+        .conflict-warning {
+            background: var(--warning-light);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .conflict-warning h4 {
+            color: #B45309;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .header-actions {
+                flex-direction: column;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                padding: 0 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .hero {
+                padding: 2rem 1.5rem;
+            }
+
+            .hero h2 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-title">
+            <div>
+                <h1>Sabbatical Program</h1>
+                <p class="subtitle">Honoring Long-Tenured Excellence</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <div class="user-info" id="userInfo">
+                <div class="user-name" id="userName">Loading...</div>
+                <div class="user-roles" id="userRoles"></div>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav-tabs" id="navTabs">
+        <button class="nav-tab active" data-view="staff" onclick="switchView('staff')">My Sabbatical</button>
+        <button class="nav-tab hidden" data-view="talent" onclick="switchView('talent')">
+            Talent Review <span class="badge hidden" id="talentBadge">0</span>
+        </button>
+        <button class="nav-tab hidden" data-view="hr" onclick="switchView('hr')">
+            HR Approval <span class="badge hidden" id="hrBadge">0</span>
+        </button>
+        <button class="nav-tab hidden" data-view="director" onclick="switchView('director')">Team Status</button>
+        <button class="nav-tab hidden" data-view="all" onclick="switchView('all')">All Applications</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Staff View -->
+        <div id="staffView" class="view">
+            <div class="hero">
+                <h2>Celebrate Your <span class="gold-accent">Dedication</span></h2>
+                <p>10+ years of service earns you a well-deserved sabbatical</p>
+            </div>
+
+            <div id="eligibilityBanner" class="eligibility-banner">
+                <!-- Filled by JS -->
+            </div>
+
+            <div id="myApplications" class="card">
+                <div class="card-header">
+                    <h3 class="card-title">My Applications</h3>
+                    <button class="btn btn-gold" id="newApplicationBtn" onclick="openApplicationModal()">
+                        + New Application
+                    </button>
+                </div>
+                <div id="myApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Talent View -->
+        <div id="talentView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Pending Talent Review</h3>
+                </div>
+                <div id="talentApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HR View -->
+        <div id="hrView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Pending HR Approval</h3>
+                </div>
+                <div id="hrApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Director View -->
+        <div id="directorView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Team Sabbaticals</h3>
+                </div>
+                <div id="directorApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Applications View -->
+        <div id="allView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">All Applications</h3>
+                    <select class="form-select" style="width: auto;" onchange="filterApplications(this.value)">
+                        <option value="">All Statuses</option>
+                        <option value="pending_talent">Pending Talent</option>
+                        <option value="pending_hr">Pending HR</option>
+                        <option value="approved">Approved</option>
+                        <option value="denied">Denied</option>
+                        <option value="withdrawn">Withdrawn</option>
+                    </select>
+                </div>
+                <div id="allApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Application Modal -->
+    <div id="applicationModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Apply for Sabbatical</h2>
+                <button class="modal-close" onclick="closeApplicationModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="applicationForm" onsubmit="submitApplication(event)">
+                    <div class="form-group">
+                        <label class="form-label">Employee</label>
+                        <div id="employeeDisplay" style="padding: 0.75rem; background: #F9FAFB; border-radius: 8px;">
+                            <strong id="empName">Loading...</strong>
+                            <div style="color: var(--text-muted); font-size: 0.9rem;">
+                                <span id="empTitle"></span> | <span id="empSite"></span>
+                            </div>
+                            <div style="margin-top: 0.5rem;">
+                                <span class="years-badge" id="empYears">0 Years</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-input" id="startDate" required onchange="checkConflicts()">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-input" id="endDate" required onchange="checkConflicts()">
+                        </div>
+                    </div>
+
+                    <div id="conflictWarning" class="conflict-warning hidden">
+                        <h4>Site Conflict Warning</h4>
+                        <p id="conflictDetails"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">How do you plan to spend your sabbatical?</label>
+                        <textarea class="form-textarea" id="sabbaticalPurpose" required
+                            placeholder="Share your plans - travel, family time, personal projects, rest and rejuvenation..."></textarea>
+                        <p class="form-hint">This helps us celebrate your journey!</p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeApplicationModal()">Cancel</button>
+                <button class="btn btn-gold" onclick="submitApplication(event)">Submit Application</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="reviewModal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Review Application</h2>
+                <button class="modal-close" onclick="closeReviewModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="reviewDetails">
+                    <!-- Filled by JS -->
+                </div>
+
+                <div id="reviewHistory" class="timeline" style="margin-top: 1.5rem;">
+                    <!-- Filled by JS -->
+                </div>
+
+                <div class="review-panel" id="reviewPanel">
+                    <label class="form-label">Review Notes</label>
+                    <textarea class="form-textarea" id="reviewNotes" placeholder="Add any notes about your decision..."></textarea>
+                    <div class="review-actions">
+                        <button class="btn btn-success" onclick="submitReview('approved')">Approve</button>
+                        <button class="btn btn-danger" onclick="submitReview('denied')">Deny</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confetti Container -->
+    <div id="confettiContainer" class="confetti-container"></div>
+
+    <script>
+        // Global state
+        let currentUser = null;
+        let currentView = 'staff';
+        let selectedApplication = null;
+        let employeeData = null;
+
+        // Initialize app
+        async function init() {
+            try {
+                const response = await fetch('/api/user');
+                if (response.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+                currentUser = await response.json();
+
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userRoles').textContent = currentUser.roles.join(', ');
+
+                // Show relevant tabs based on roles
+                if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
+                    document.querySelector('[data-view="talent"]').classList.remove('hidden');
+                }
+                if (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
+                    document.querySelector('[data-view="hr"]').classList.remove('hidden');
+                }
+                if (currentUser.roles.includes('director')) {
+                    document.querySelector('[data-view="director"]').classList.remove('hidden');
+                }
+                if (currentUser.roles.includes('admin')) {
+                    document.querySelector('[data-view="all"]').classList.remove('hidden');
+                }
+
+                // Load initial data
+                await loadEligibility();
+                await loadMyApplications();
+                updateBadges();
+
+            } catch (error) {
+                console.error('Init error:', error);
+            }
+        }
+
+        // View switching
+        function switchView(view) {
+            currentView = view;
+
+            // Update tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.view === view);
+            });
+
+            // Show/hide views
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(view + 'View').classList.remove('hidden');
+
+            // Load view data
+            if (view === 'talent') loadTalentApplications();
+            else if (view === 'hr') loadHRApplications();
+            else if (view === 'director') loadDirectorApplications();
+            else if (view === 'all') loadAllApplications();
+        }
+
+        // Load eligibility
+        async function loadEligibility() {
+            try {
+                const response = await fetch('/api/eligibility-check');
+                const data = await response.json();
+
+                const banner = document.getElementById('eligibilityBanner');
+                const btn = document.getElementById('newApplicationBtn');
+
+                if (data.eligible) {
+                    banner.className = 'eligibility-banner eligible';
+                    banner.innerHTML = `
+                        <div class="eligibility-icon">&#10003;</div>
+                        <div class="eligibility-text">
+                            <h3>Congratulations! You're Eligible</h3>
+                            <p>${data.years_of_service} years of dedicated service</p>
+                        </div>
+                        <span class="years-badge">${data.years_of_service} Years</span>
+                    `;
+                    btn.disabled = false;
+                } else {
+                    banner.className = 'eligibility-banner not-eligible';
+                    banner.innerHTML = `
+                        <div class="eligibility-icon">&#8987;</div>
+                        <div class="eligibility-text">
+                            <h3>${data.years_until_eligible} Years Until Eligible</h3>
+                            <p>${data.years_of_service} of ${data.years_required} years required</p>
+                        </div>
+                    `;
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                }
+
+                // Store for form
+                employeeData = data;
+            } catch (error) {
+                console.error('Eligibility error:', error);
+            }
+        }
+
+        // Load applications
+        async function loadMyApplications() {
+            try {
+                const response = await fetch('/api/applications');
+                const data = await response.json();
+
+                // Filter to just current user's applications
+                const myApps = data.applications.filter(a =>
+                    a.employee_email.toLowerCase() === currentUser.email.toLowerCase()
+                );
+
+                const container = document.getElementById('myApplicationsList');
+
+                if (myApps.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p>No applications yet</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = myApps.map(app => renderApplication(app, false)).join('');
+                }
+            } catch (error) {
+                console.error('Load applications error:', error);
+            }
+        }
+
+        async function loadTalentApplications() {
+            try {
+                const response = await fetch('/api/applications?status=pending_talent');
+                const data = await response.json();
+
+                const container = document.getElementById('talentApplicationsList');
+                if (data.applications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending review</p></div>';
+                } else {
+                    container.innerHTML = data.applications.map(app => renderApplication(app, true)).join('');
+                }
+            } catch (error) {
+                console.error('Load talent apps error:', error);
+            }
+        }
+
+        async function loadHRApplications() {
+            try {
+                const response = await fetch('/api/applications?status=pending_hr');
+                const data = await response.json();
+
+                const container = document.getElementById('hrApplicationsList');
+                if (data.applications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending approval</p></div>';
+                } else {
+                    container.innerHTML = data.applications.map(app => renderApplication(app, true)).join('');
+                }
+            } catch (error) {
+                console.error('Load HR apps error:', error);
+            }
+        }
+
+        async function loadDirectorApplications() {
+            try {
+                const response = await fetch('/api/applications');
+                const data = await response.json();
+
+                const container = document.getElementById('directorApplicationsList');
+                if (data.applications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No team sabbaticals</p></div>';
+                } else {
+                    container.innerHTML = data.applications.map(app => renderApplication(app, false)).join('');
+                }
+            } catch (error) {
+                console.error('Load director apps error:', error);
+            }
+        }
+
+        async function loadAllApplications(status = '') {
+            try {
+                const url = status ? `/api/applications?status=${status}` : '/api/applications';
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const container = document.getElementById('allApplicationsList');
+                if (data.applications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications found</p></div>';
+                } else {
+                    container.innerHTML = data.applications.map(app => renderApplication(app, true)).join('');
+                }
+            } catch (error) {
+                console.error('Load all apps error:', error);
+            }
+        }
+
+        function filterApplications(status) {
+            loadAllApplications(status);
+        }
+
+        // Render application card
+        function renderApplication(app, showReviewButton) {
+            const statusLabels = {
+                'pending_talent': 'Pending Talent Review',
+                'pending_hr': 'Pending HR Approval',
+                'approved': 'Approved',
+                'denied': 'Denied',
+                'withdrawn': 'Withdrawn'
+            };
+
+            const canReview = showReviewButton && (
+                (app.status === 'pending_talent' && (currentUser.roles.includes('talent') || currentUser.roles.includes('admin'))) ||
+                (app.status === 'pending_hr' && (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')))
+            );
+
+            return `
+                <div class="application-item">
+                    <div class="application-header">
+                        <div>
+                            <div class="application-employee">${app.employee_name}</div>
+                            <div class="application-meta">${app.job_title} | ${app.site}</div>
+                        </div>
+                        <span class="status-badge status-${app.status}">${statusLabels[app.status]}</span>
+                    </div>
+                    <div style="margin-bottom: 0.75rem;">
+                        <span class="years-badge" style="font-size: 0.8rem; padding: 0.25rem 0.75rem;">
+                            ${app.years_of_service} Years
+                        </span>
+                    </div>
+                    <div class="application-dates">
+                        <div><span>Start:</span> <strong>${formatDate(app.requested_start_date)}</strong></div>
+                        <div><span>End:</span> <strong>${formatDate(app.requested_end_date)}</strong></div>
+                        <div><span>Duration:</span> <strong>${app.duration_weeks} weeks</strong></div>
+                    </div>
+                    ${app.sabbatical_purpose ? `<p style="margin-top: 0.75rem; color: var(--text-muted); font-style: italic;">"${app.sabbatical_purpose}"</p>` : ''}
+                    ${canReview ? `<button class="btn btn-primary" style="margin-top: 1rem;" onclick="openReviewModal('${app.application_id}')">Review</button>` : ''}
+                </div>
+            `;
+        }
+
+        // Update badges
+        async function updateBadges() {
+            try {
+                if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
+                    const response = await fetch('/api/applications?status=pending_talent');
+                    const data = await response.json();
+                    const badge = document.getElementById('talentBadge');
+                    if (data.applications.length > 0) {
+                        badge.textContent = data.applications.length;
+                        badge.classList.remove('hidden');
+                    }
+                }
+
+                if (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
+                    const response = await fetch('/api/applications?status=pending_hr');
+                    const data = await response.json();
+                    const badge = document.getElementById('hrBadge');
+                    if (data.applications.length > 0) {
+                        badge.textContent = data.applications.length;
+                        badge.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Update badges error:', error);
+            }
+        }
+
+        // Application modal
+        async function openApplicationModal() {
+            try {
+                const response = await fetch('/api/employee-lookup');
+                const emp = await response.json();
+
+                document.getElementById('empName').textContent = emp.full_name;
+                document.getElementById('empTitle').textContent = emp.job_title;
+                document.getElementById('empSite').textContent = emp.site;
+                document.getElementById('empYears').textContent = emp.years_of_service + ' Years';
+
+                employeeData = emp;
+
+                document.getElementById('applicationModal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Open modal error:', error);
+            }
+        }
+
+        function closeApplicationModal() {
+            document.getElementById('applicationModal').classList.add('hidden');
+            document.getElementById('applicationForm').reset();
+            document.getElementById('conflictWarning').classList.add('hidden');
+        }
+
+        async function checkConflicts() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate || !employeeData) return;
+
+            try {
+                const response = await fetch(
+                    `/api/site-conflicts?site=${encodeURIComponent(employeeData.site)}&start_date=${startDate}&end_date=${endDate}`
+                );
+                const data = await response.json();
+
+                const warning = document.getElementById('conflictWarning');
+                if (data.has_conflicts) {
+                    document.getElementById('conflictDetails').innerHTML = data.conflicts.map(c =>
+                        `${c.employee_name}: ${formatDate(c.start_date)} - ${formatDate(c.end_date)}`
+                    ).join('<br>');
+                    warning.classList.remove('hidden');
+                } else {
+                    warning.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Check conflicts error:', error);
+            }
+        }
+
+        async function submitApplication(event) {
+            event.preventDefault();
+
+            const data = {
+                start_date: document.getElementById('startDate').value,
+                end_date: document.getElementById('endDate').value,
+                purpose: document.getElementById('sabbaticalPurpose').value
+            };
+
+            try {
+                const response = await fetch('/api/applications', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeApplicationModal();
+                    loadMyApplications();
+                    showConfetti();
+                    alert('Application submitted successfully!');
+                } else {
+                    alert(result.error || 'Failed to submit application');
+                }
+            } catch (error) {
+                console.error('Submit error:', error);
+                alert('Failed to submit application');
+            }
+        }
+
+        // Review modal
+        async function openReviewModal(applicationId) {
+            selectedApplication = applicationId;
+
+            try {
+                const response = await fetch('/api/applications');
+                const data = await response.json();
+                const app = data.applications.find(a => a.application_id === applicationId);
+
+                if (!app) return;
+
+                document.getElementById('reviewDetails').innerHTML = `
+                    <div style="margin-bottom: 1rem;">
+                        <h3 style="margin-bottom: 0.5rem;">${app.employee_name}</h3>
+                        <p style="color: var(--text-muted);">${app.job_title} | ${app.department} | ${app.site}</p>
+                        <span class="years-badge" style="margin-top: 0.5rem; display: inline-block;">
+                            ${app.years_of_service} Years of Service
+                        </span>
+                    </div>
+                    <div class="application-dates" style="margin-bottom: 1rem;">
+                        <div><span>Start:</span> <strong>${formatDate(app.requested_start_date)}</strong></div>
+                        <div><span>End:</span> <strong>${formatDate(app.requested_end_date)}</strong></div>
+                        <div><span>Duration:</span> <strong>${app.duration_weeks} weeks</strong></div>
+                    </div>
+                    <div style="background: #F9FAFB; padding: 1rem; border-radius: 8px;">
+                        <strong>Plans:</strong>
+                        <p style="margin-top: 0.5rem; font-style: italic;">"${app.sabbatical_purpose}"</p>
+                    </div>
+                `;
+
+                // Load history
+                const historyResponse = await fetch(`/api/application-history/${applicationId}`);
+                const historyData = await historyResponse.json();
+
+                const actionLabels = {
+                    'submitted': 'Application Submitted',
+                    'talent_approved': 'Approved by Talent',
+                    'talent_denied': 'Denied by Talent',
+                    'hr_approved': 'Approved by HR',
+                    'hr_denied': 'Denied by HR',
+                    'withdrawn': 'Withdrawn'
+                };
+
+                document.getElementById('reviewHistory').innerHTML = historyData.history.map(h => `
+                    <div class="timeline-item completed">
+                        <div class="timeline-date">${formatDateTime(h.created_at)}</div>
+                        <div class="timeline-action">${actionLabels[h.action] || h.action}</div>
+                        ${h.actor_name ? `<div class="timeline-notes">by ${h.actor_name}</div>` : ''}
+                        ${h.notes ? `<div class="timeline-notes">${h.notes}</div>` : ''}
+                    </div>
+                `).join('');
+
+                // Show/hide review panel based on status and role
+                const canReview = (
+                    (app.status === 'pending_talent' && (currentUser.roles.includes('talent') || currentUser.roles.includes('admin'))) ||
+                    (app.status === 'pending_hr' && (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')))
+                );
+                document.getElementById('reviewPanel').classList.toggle('hidden', !canReview);
+
+                document.getElementById('reviewModal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Open review modal error:', error);
+            }
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+            document.getElementById('reviewNotes').value = '';
+            selectedApplication = null;
+        }
+
+        async function submitReview(decision) {
+            if (!selectedApplication) return;
+
+            const notes = document.getElementById('reviewNotes').value;
+
+            try {
+                const response = await fetch(`/api/applications/${selectedApplication}/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision, notes })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeReviewModal();
+
+                    // Reload current view
+                    if (currentView === 'talent') loadTalentApplications();
+                    else if (currentView === 'hr') loadHRApplications();
+                    else if (currentView === 'all') loadAllApplications();
+
+                    updateBadges();
+
+                    if (decision === 'approved' && result.new_status === 'approved') {
+                        showConfetti();
+                    }
+
+                    alert(`Application ${decision}!`);
+                } else {
+                    alert(result.error || 'Failed to submit review');
+                }
+            } catch (error) {
+                console.error('Submit review error:', error);
+                alert('Failed to submit review');
+            }
+        }
+
+        // Confetti effect
+        function showConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#6B46C1', '#D4AF37', '#10B981', '#F59E0B', '#EF4444'];
+
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                container.appendChild(confetti);
+            }
+
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        // Utility functions
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return 'N/A';
+            return new Date(dateStr).toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function logout() {
+            window.location.href = '/auth/logout';
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
