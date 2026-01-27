@@ -42,8 +42,14 @@ GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
 # Dev mode - bypasses OAuth for local testing
-DEV_MODE = os.environ.get('FLASK_ENV') == 'development' or not GOOGLE_CLIENT_ID
+# Cloud Run sets K_SERVICE env var, so if that exists we're in production
+IS_CLOUD_RUN = os.environ.get('K_SERVICE') is not None
+DEV_MODE = not IS_CLOUD_RUN and (os.environ.get('FLASK_ENV') == 'development' or not GOOGLE_CLIENT_ID)
 DEV_USER_EMAIL = 'sshirey@firstlineschools.org'
+
+logger.info(f"GOOGLE_CLIENT_ID set: {bool(GOOGLE_CLIENT_ID)}")
+logger.info(f"IS_CLOUD_RUN: {IS_CLOUD_RUN}")
+logger.info(f"DEV_MODE: {DEV_MODE}")
 
 # Role configuration
 TALENT_TEAM_EMAILS = [
