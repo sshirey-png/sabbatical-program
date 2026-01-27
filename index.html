@@ -974,6 +974,162 @@
             color: #065F46;
         }
 
+        /* Pipeline/Kanban View */
+        .pipeline-container {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+        }
+
+        .pipeline-column {
+            flex: 1;
+            min-width: 250px;
+            max-width: 300px;
+            background: var(--gray-light);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .pipeline-header {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pipeline-header h4 {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .pipeline-count {
+            background: rgba(0,0,0,0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .pipeline-cards {
+            padding: 0.75rem;
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .pipeline-card {
+            background: white;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pipeline-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+
+        .pipeline-card-name {
+            font-weight: 600;
+            color: var(--primary-navy);
+            font-size: 0.9rem;
+        }
+
+        .pipeline-card-meta {
+            font-size: 0.75rem;
+            color: var(--gray);
+            margin-top: 0.25rem;
+        }
+
+        .pipeline-card-dates {
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .pipeline-empty {
+            text-align: center;
+            color: var(--gray);
+            font-size: 0.8rem;
+            padding: 1rem;
+        }
+
+        /* Calendar View */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        @media (max-width: 1200px) {
+            .calendar-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .calendar-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .calendar-month {
+            background: var(--gray-light);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-month-header {
+            background: var(--primary-navy);
+            color: white;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .calendar-month-apps {
+            padding: 0.5rem;
+            min-height: 60px;
+        }
+
+        .calendar-app {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+        }
+
+        .calendar-app.approved {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .calendar-app.pending {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .calendar-empty {
+            color: var(--gray);
+            text-align: center;
+            font-size: 0.8rem;
+        }
+
+        .calendar-actions {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+        }
+
         /* Warning Box */
         .warning-box {
             background: var(--warning-light);
@@ -1084,6 +1240,8 @@
             CEO Approval <span class="badge hidden" id="ceoBadge">0</span>
         </button>
         <button class="nav-tab hidden" data-view="team" onclick="switchView('team')">Team Status</button>
+        <button class="nav-tab hidden" data-view="pipeline" onclick="switchView('pipeline')">Pipeline</button>
+        <button class="nav-tab hidden" data-view="calendar" onclick="switchView('calendar')">Calendar</button>
         <button class="nav-tab hidden" data-view="all" onclick="switchView('all')">All Applications</button>
         <button class="nav-tab hidden" data-view="emails" onclick="switchView('emails')">Email Templates</button>
     </nav>
@@ -1180,6 +1338,58 @@
                 <div id="teamApplicationsList" class="application-list">
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Pipeline View (Kanban) -->
+        <div id="pipelineView" class="view hidden">
+            <div class="pipeline-container">
+                <div class="pipeline-column">
+                    <div class="pipeline-header" style="background: #FEE2E2;">
+                        <h4>Director Review</h4>
+                        <span class="pipeline-count" id="pipelineDirectorCount">0</span>
+                    </div>
+                    <div class="pipeline-cards" id="pipelineDirector"></div>
+                </div>
+                <div class="pipeline-column">
+                    <div class="pipeline-header" style="background: var(--warning-light);">
+                        <h4>Talent Review</h4>
+                        <span class="pipeline-count" id="pipelineTalentCount">0</span>
+                    </div>
+                    <div class="pipeline-cards" id="pipelineTalent"></div>
+                </div>
+                <div class="pipeline-column">
+                    <div class="pipeline-header" style="background: #E0E7FF;">
+                        <h4>CEO Approval</h4>
+                        <span class="pipeline-count" id="pipelineCEOCount">0</span>
+                    </div>
+                    <div class="pipeline-cards" id="pipelineCEO"></div>
+                </div>
+                <div class="pipeline-column">
+                    <div class="pipeline-header" style="background: var(--success-light);">
+                        <h4>Approved</h4>
+                        <span class="pipeline-count" id="pipelineApprovedCount">0</span>
+                    </div>
+                    <div class="pipeline-cards" id="pipelineApproved"></div>
+                </div>
+                <div class="pipeline-column">
+                    <div class="pipeline-header" style="background: var(--error-light);">
+                        <h4>Denied</h4>
+                        <span class="pipeline-count" id="pipelineDeniedCount">0</span>
+                    </div>
+                    <div class="pipeline-cards" id="pipelineDenied"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar View -->
+        <div id="calendarView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Sabbatical Calendar</h3>
+                    <p class="card-subtitle">View approved and pending CEO approval sabbaticals by month</p>
+                </div>
+                <div id="calendarContainer"></div>
             </div>
         </div>
 
@@ -1618,6 +1828,8 @@
             document.querySelector('[data-view="team"]').classList.add('hidden');
             document.querySelector('[data-view="all"]').classList.add('hidden');
             document.querySelector('[data-view="emails"]').classList.add('hidden');
+            document.querySelector('[data-view="pipeline"]').classList.add('hidden');
+            document.querySelector('[data-view="calendar"]').classList.add('hidden');
 
             // Show based on roles
             if (roles.includes('director') || roles.includes('admin')) {
@@ -1626,6 +1838,8 @@
             }
             if (roles.includes('talent') || roles.includes('hr') || roles.includes('admin')) {
                 document.querySelector('[data-view="talent"]').classList.remove('hidden');
+                document.querySelector('[data-view="pipeline"]').classList.remove('hidden');
+                document.querySelector('[data-view="calendar"]').classList.remove('hidden');
             }
             if (roles.includes('ceo') || roles.includes('admin')) {
                 document.querySelector('[data-view="ceo"]').classList.remove('hidden');
@@ -1860,6 +2074,12 @@
                     break;
                 case 'all':
                     loadAllApplications();
+                    break;
+                case 'pipeline':
+                    loadPipelineView();
+                    break;
+                case 'calendar':
+                    loadCalendarView();
                     break;
             }
         }
@@ -2137,6 +2357,184 @@
 
         function filterApplications(status) {
             loadAllApplications(status);
+        }
+
+        // Load Pipeline/Kanban view
+        async function loadPipelineView() {
+            const columns = {
+                'pending_director': { container: 'pipelineDirector', count: 'pipelineDirectorCount' },
+                'pending_talent': { container: 'pipelineTalent', count: 'pipelineTalentCount' },
+                'pending_ceo': { container: 'pipelineCEO', count: 'pipelineCEOCount' },
+                'approved': { container: 'pipelineApproved', count: 'pipelineApprovedCount' },
+                'denied': { container: 'pipelineDenied', count: 'pipelineDeniedCount' }
+            };
+
+            // Clear all columns first
+            Object.values(columns).forEach(col => {
+                document.getElementById(col.container).innerHTML = '';
+                document.getElementById(col.count).textContent = '0';
+            });
+
+            let apps = [];
+            if (demoMode) {
+                apps = demoApplications;
+            } else {
+                try {
+                    const response = await fetch('/api/applications');
+                    const data = await response.json();
+                    apps = data.applications || [];
+                } catch (error) {
+                    console.error('Pipeline load error:', error);
+                    return;
+                }
+            }
+
+            // Group applications by status
+            const grouped = {};
+            Object.keys(columns).forEach(status => grouped[status] = []);
+
+            apps.forEach(app => {
+                if (grouped[app.status]) {
+                    grouped[app.status].push(app);
+                }
+            });
+
+            // Render cards in each column
+            Object.entries(columns).forEach(([status, col]) => {
+                const statusApps = grouped[status] || [];
+                document.getElementById(col.count).textContent = statusApps.length;
+
+                const container = document.getElementById(col.container);
+                if (statusApps.length === 0) {
+                    container.innerHTML = '<div class="pipeline-empty">No applications</div>';
+                } else {
+                    container.innerHTML = statusApps.map(app => renderPipelineCard(app)).join('');
+                }
+            });
+        }
+
+        function renderPipelineCard(app) {
+            const startDate = new Date(app.requested_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const endDate = new Date(app.requested_end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+            return `
+                <div class="pipeline-card" onclick="showApplicationDetails('${app.application_id}')">
+                    <div class="pipeline-card-name">${app.employee_name}</div>
+                    <div class="pipeline-card-meta">${app.site || app.department || 'N/A'}</div>
+                    <div class="pipeline-card-dates">${startDate} - ${endDate}</div>
+                    ${app.leave_weeks ? `<div class="pipeline-card-meta">${app.leave_weeks} weeks</div>` : ''}
+                </div>
+            `;
+        }
+
+        // Load Calendar view
+        async function loadCalendarView() {
+            let apps = [];
+            if (demoMode) {
+                apps = demoApplications.filter(a => a.status === 'approved' || a.status === 'pending_ceo');
+            } else {
+                try {
+                    const response = await fetch('/api/applications');
+                    const data = await response.json();
+                    apps = (data.applications || []).filter(a => a.status === 'approved' || a.status === 'pending_ceo');
+                } catch (error) {
+                    console.error('Calendar load error:', error);
+                    return;
+                }
+            }
+
+            const container = document.getElementById('calendarContainer');
+            const year = new Date().getFullYear();
+
+            // Generate 12-month calendar view
+            let html = '<div class="calendar-grid">';
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+            months.forEach((month, idx) => {
+                const monthStart = new Date(year, idx, 1);
+                const monthEnd = new Date(year, idx + 1, 0);
+
+                // Find applications that overlap with this month
+                const monthApps = apps.filter(app => {
+                    const appStart = new Date(app.requested_start_date);
+                    const appEnd = new Date(app.requested_end_date);
+                    return appStart <= monthEnd && appEnd >= monthStart;
+                });
+
+                html += `
+                    <div class="calendar-month">
+                        <div class="calendar-month-header">${month} ${year}</div>
+                        <div class="calendar-month-apps">
+                            ${monthApps.length === 0 ? '<div class="calendar-empty">-</div>' :
+                                monthApps.map(app => `
+                                    <div class="calendar-app ${app.status === 'approved' ? 'approved' : 'pending'}"
+                                         title="${app.employee_name}: ${app.requested_start_date} to ${app.requested_end_date}">
+                                        ${app.employee_name.split(' ')[0]}
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            // Add export button
+            html += `
+                <div class="calendar-actions">
+                    <button class="btn btn-secondary" onclick="exportToCSV()">
+                        Export to CSV
+                    </button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Export to CSV
+        async function exportToCSV() {
+            let apps = [];
+            if (demoMode) {
+                apps = demoApplications;
+            } else {
+                try {
+                    const response = await fetch('/api/applications');
+                    const data = await response.json();
+                    apps = data.applications || [];
+                } catch (error) {
+                    alert('Error loading applications for export');
+                    return;
+                }
+            }
+
+            const headers = ['Name', 'Email', 'Site', 'Department', 'Job Title', 'Years of Service',
+                            'Start Date', 'End Date', 'Duration (weeks)', 'Leave Option', 'Status', 'Submitted'];
+
+            const rows = apps.map(app => [
+                app.employee_name,
+                app.employee_email,
+                app.site || '',
+                app.department || '',
+                app.job_title || '',
+                app.years_of_service || '',
+                app.requested_start_date,
+                app.requested_end_date,
+                app.duration_weeks || app.leave_weeks || '',
+                app.leave_weeks ? `${app.leave_weeks} weeks (${app.salary_percentage}% salary)` : '',
+                app.status,
+                app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : ''
+            ]);
+
+            const csvContent = [headers, ...rows]
+                .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+                .join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `sabbatical_applications_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
         }
 
         // Render application card
@@ -2491,6 +2889,12 @@
                 console.error('Submit error:', error);
                 alert('Failed to submit application');
             }
+        }
+
+        // Show application details (from pipeline card click)
+        async function showApplicationDetails(applicationId) {
+            // For now, just open the review modal which shows details
+            await openReviewModal(applicationId);
         }
 
         // Review modal
