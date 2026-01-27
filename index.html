@@ -1185,6 +1185,113 @@
 
             updateTabsForRoles();
             switchView('staff');  // Reset to staff view
+
+            // Reload data with demo data
+            loadMyApplications();
+            updateBadges();
+        }
+
+        // Demo data - sample applications for demonstration
+        const demoApplications = [
+            {
+                application_id: 'demo-1',
+                employee_name: 'Maria Rodriguez',
+                employee_email: 'mrodriguez@firstlineschools.org',
+                years_of_service: 15.3,
+                job_title: 'Lead Teacher',
+                department: 'Academics',
+                site: 'Samuel J. Green Charter School',
+                requested_start_date: '2026-06-01',
+                requested_end_date: '2026-08-15',
+                duration_weeks: 11,
+                sabbatical_purpose: 'I plan to travel to Spain to immerse myself in the language and culture, which will enhance my Spanish instruction when I return. I also want to spend quality time with my aging parents.',
+                status: 'pending_talent',
+                submitted_at: '2026-01-15T10:30:00Z'
+            },
+            {
+                application_id: 'demo-2',
+                employee_name: 'James Washington',
+                employee_email: 'jwashington@firstlineschools.org',
+                years_of_service: 12.7,
+                job_title: 'Operations Manager',
+                department: 'Operations',
+                site: 'Arthur Ashe Charter School',
+                requested_start_date: '2026-07-01',
+                requested_end_date: '2026-09-30',
+                duration_weeks: 13,
+                sabbatical_purpose: 'After 12 years of dedicated service, I want to write a book about effective school operations and spend time mentoring young professionals in my community.',
+                status: 'pending_hr',
+                submitted_at: '2026-01-10T14:20:00Z',
+                talent_reviewer: 'sshirey@firstlineschools.org',
+                talent_decision: 'approved',
+                talent_notes: 'Strong candidate with excellent service record.',
+                talent_reviewed_at: '2026-01-12T09:15:00Z'
+            },
+            {
+                application_id: 'demo-3',
+                employee_name: 'Patricia Chen',
+                employee_email: 'pchen@firstlineschools.org',
+                years_of_service: 18.2,
+                job_title: 'School Counselor',
+                department: 'Student Services',
+                site: 'Langston Hughes Academy',
+                requested_start_date: '2026-03-01',
+                requested_end_date: '2026-05-31',
+                duration_weeks: 13,
+                sabbatical_purpose: 'I will be completing my doctoral dissertation on trauma-informed practices in urban schools. This research will directly benefit our students and staff.',
+                status: 'approved',
+                submitted_at: '2025-11-20T08:45:00Z',
+                talent_reviewer: 'sshirey@firstlineschools.org',
+                talent_decision: 'approved',
+                talent_notes: 'Excellent application. Research will benefit FLS.',
+                talent_reviewed_at: '2025-11-22T11:30:00Z',
+                hr_reviewer: 'brichardson@firstlineschools.org',
+                hr_decision: 'approved',
+                hr_notes: 'Coverage plan approved. Congratulations!',
+                hr_reviewed_at: '2025-11-25T15:00:00Z'
+            },
+            {
+                application_id: 'demo-4',
+                employee_name: 'Robert Thompson',
+                employee_email: 'rthompson@firstlineschools.org',
+                years_of_service: 11.1,
+                job_title: 'Math Teacher',
+                department: 'Academics',
+                site: 'Samuel J. Green Charter School',
+                requested_start_date: '2026-01-15',
+                requested_end_date: '2026-03-15',
+                duration_weeks: 8,
+                sabbatical_purpose: 'Personal rejuvenation and family time after a decade of service.',
+                status: 'denied',
+                submitted_at: '2025-10-05T13:00:00Z',
+                talent_reviewer: 'sshirey@firstlineschools.org',
+                talent_decision: 'denied',
+                talent_notes: 'Timing conflicts with state testing window. Please reapply for summer dates.',
+                talent_reviewed_at: '2025-10-08T10:00:00Z'
+            },
+            {
+                application_id: 'demo-5',
+                employee_name: 'Angela Davis',
+                employee_email: 'adavis@firstlineschools.org',
+                years_of_service: 14.5,
+                job_title: 'Assistant Principal',
+                department: 'Administration',
+                site: 'Arthur Ashe Charter School',
+                requested_start_date: '2026-06-15',
+                requested_end_date: '2026-08-01',
+                duration_weeks: 7,
+                sabbatical_purpose: 'I want to visit schools in Finland and Singapore to study their educational systems and bring back innovative practices to FirstLine.',
+                status: 'pending_talent',
+                submitted_at: '2026-01-20T16:45:00Z'
+            }
+        ];
+
+        // Get demo applications filtered by status
+        function getDemoApplications(status = null) {
+            if (status) {
+                return demoApplications.filter(app => app.status === status);
+            }
+            return demoApplications;
         }
 
         // View switching
@@ -1249,6 +1356,30 @@
 
         // Load applications
         async function loadMyApplications() {
+            const container = document.getElementById('myApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                // Show a sample "my application" for demo
+                const myDemoApp = {
+                    application_id: 'demo-mine',
+                    employee_name: 'Demo User',
+                    employee_email: currentUser.email,
+                    years_of_service: 12.5,
+                    job_title: 'Your Job Title',
+                    department: 'Your Department',
+                    site: 'Your School',
+                    requested_start_date: '2026-06-01',
+                    requested_end_date: '2026-07-31',
+                    duration_weeks: 9,
+                    sabbatical_purpose: 'This is what your submitted application would look like. You can see the status and track its progress through the approval workflow.',
+                    status: 'pending_talent',
+                    submitted_at: '2026-01-20T10:00:00Z'
+                };
+                container.innerHTML = renderApplication(myDemoApp, false);
+                return;
+            }
+
             try {
                 const response = await fetch('/api/applications');
                 const data = await response.json();
@@ -1257,8 +1388,6 @@
                 const myApps = data.applications.filter(a =>
                     a.employee_email.toLowerCase() === currentUser.email.toLowerCase()
                 );
-
-                const container = document.getElementById('myApplicationsList');
 
                 if (myApps.length === 0) {
                     container.innerHTML = `
@@ -1278,11 +1407,23 @@
         }
 
         async function loadTalentApplications() {
+            const container = document.getElementById('talentApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                const apps = getDemoApplications('pending_talent');
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending review</p></div>';
+                } else {
+                    container.innerHTML = apps.map(app => renderApplication(app, true)).join('');
+                }
+                return;
+            }
+
             try {
                 const response = await fetch('/api/applications?status=pending_talent');
                 const data = await response.json();
 
-                const container = document.getElementById('talentApplicationsList');
                 if (data.applications.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>No applications pending review</p></div>';
                 } else {
@@ -1294,11 +1435,23 @@
         }
 
         async function loadHRApplications() {
+            const container = document.getElementById('hrApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                const apps = getDemoApplications('pending_hr');
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending approval</p></div>';
+                } else {
+                    container.innerHTML = apps.map(app => renderApplication(app, true)).join('');
+                }
+                return;
+            }
+
             try {
                 const response = await fetch('/api/applications?status=pending_hr');
                 const data = await response.json();
 
-                const container = document.getElementById('hrApplicationsList');
                 if (data.applications.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>No applications pending approval</p></div>';
                 } else {
@@ -1310,11 +1463,26 @@
         }
 
         async function loadDirectorApplications() {
+            const container = document.getElementById('directorApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                // Show applications from "team members"
+                const apps = demoApplications.filter(app =>
+                    app.site === 'Arthur Ashe Charter School' || app.site === 'Samuel J. Green Charter School'
+                );
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No team sabbaticals</p></div>';
+                } else {
+                    container.innerHTML = apps.map(app => renderApplication(app, false)).join('');
+                }
+                return;
+            }
+
             try {
                 const response = await fetch('/api/applications');
                 const data = await response.json();
 
-                const container = document.getElementById('directorApplicationsList');
                 if (data.applications.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>No team sabbaticals</p></div>';
                 } else {
@@ -1326,12 +1494,24 @@
         }
 
         async function loadAllApplications(status = '') {
+            const container = document.getElementById('allApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                const apps = status ? getDemoApplications(status) : demoApplications;
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications found</p></div>';
+                } else {
+                    container.innerHTML = apps.map(app => renderApplication(app, true)).join('');
+                }
+                return;
+            }
+
             try {
                 const url = status ? `/api/applications?status=${status}` : '/api/applications';
                 const response = await fetch(url);
                 const data = await response.json();
 
-                const container = document.getElementById('allApplicationsList');
                 if (data.applications.length === 0) {
                     container.innerHTML = '<div class="empty-state"><p>No applications found</p></div>';
                 } else {
@@ -1389,6 +1569,33 @@
         // Update badges
         async function updateBadges() {
             try {
+                // Use demo data counts if in demo mode
+                if (demoMode) {
+                    const talentBadge = document.getElementById('talentBadge');
+                    const hrBadge = document.getElementById('hrBadge');
+
+                    if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
+                        const talentCount = getDemoApplications('pending_talent').length;
+                        if (talentCount > 0) {
+                            talentBadge.textContent = talentCount;
+                            talentBadge.classList.remove('hidden');
+                        } else {
+                            talentBadge.classList.add('hidden');
+                        }
+                    }
+
+                    if (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
+                        const hrCount = getDemoApplications('pending_hr').length;
+                        if (hrCount > 0) {
+                            hrBadge.textContent = hrCount;
+                            hrBadge.classList.remove('hidden');
+                        } else {
+                            hrBadge.classList.add('hidden');
+                        }
+                    }
+                    return;
+                }
+
                 if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
                     const response = await fetch('/api/applications?status=pending_talent');
                     const data = await response.json();
@@ -1501,9 +1708,16 @@
             selectedApplication = applicationId;
 
             try {
-                const response = await fetch('/api/applications');
-                const data = await response.json();
-                const app = data.applications.find(a => a.application_id === applicationId);
+                let app;
+
+                // Use demo data if in demo mode
+                if (demoMode) {
+                    app = demoApplications.find(a => a.application_id === applicationId);
+                } else {
+                    const response = await fetch('/api/applications');
+                    const data = await response.json();
+                    app = data.applications.find(a => a.application_id === applicationId);
+                }
 
                 if (!app) return;
 
@@ -1527,9 +1741,6 @@
                 `;
 
                 // Load history
-                const historyResponse = await fetch(`/api/application-history/${applicationId}`);
-                const historyData = await historyResponse.json();
-
                 const actionLabels = {
                     'submitted': 'Application Submitted',
                     'talent_approved': 'Approved by Talent',
@@ -1539,7 +1750,39 @@
                     'withdrawn': 'Withdrawn'
                 };
 
-                document.getElementById('reviewHistory').innerHTML = historyData.history.map(h => `
+                let historyItems = [];
+
+                // Use demo history if in demo mode
+                if (demoMode) {
+                    historyItems.push({
+                        action: 'submitted',
+                        created_at: app.submitted_at,
+                        actor_name: app.employee_name,
+                        notes: null
+                    });
+                    if (app.talent_reviewed_at) {
+                        historyItems.push({
+                            action: app.talent_decision === 'approved' ? 'talent_approved' : 'talent_denied',
+                            created_at: app.talent_reviewed_at,
+                            actor_name: 'Talent Reviewer',
+                            notes: app.talent_notes
+                        });
+                    }
+                    if (app.hr_reviewed_at) {
+                        historyItems.push({
+                            action: app.hr_decision === 'approved' ? 'hr_approved' : 'hr_denied',
+                            created_at: app.hr_reviewed_at,
+                            actor_name: 'HR Reviewer',
+                            notes: app.hr_notes
+                        });
+                    }
+                } else {
+                    const historyResponse = await fetch(`/api/application-history/${applicationId}`);
+                    const historyData = await historyResponse.json();
+                    historyItems = historyData.history;
+                }
+
+                document.getElementById('reviewHistory').innerHTML = historyItems.map(h => `
                     <div class="timeline-item completed">
                         <div class="timeline-date">${formatDateTime(h.created_at)}</div>
                         <div class="timeline-action">${actionLabels[h.action] || h.action}</div>
@@ -1569,6 +1812,16 @@
 
         async function submitReview(decision) {
             if (!selectedApplication) return;
+
+            // Handle demo mode
+            if (demoMode) {
+                closeReviewModal();
+                if (decision === 'approved') {
+                    showConfetti();
+                }
+                alert(`[Demo Mode] Application ${decision}! In the real app, this would update the database and notify the employee.`);
+                return;
+            }
 
             const notes = document.getElementById('reviewNotes').value;
 
