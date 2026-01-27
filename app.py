@@ -67,6 +67,12 @@ ADMIN_EMAILS = [
     'spence@firstlineschools.org',
 ]
 
+# CEO for final approval
+CEO_EMAILS = [
+    'tcole@firstlineschools.org',  # CEO
+    'sshirey@firstlineschools.org',  # For testing
+]
+
 # Eligibility requirement (years of service)
 ELIGIBILITY_YEARS = 10
 
@@ -124,6 +130,8 @@ def get_user_role(email):
         roles.append('talent')
     if email_lower in [e.lower() for e in HR_TEAM_EMAILS]:
         roles.append('hr')
+    if email_lower in [e.lower() for e in CEO_EMAILS]:
+        roles.append('ceo')
     if email_lower in [e.lower() for e in ADMIN_EMAILS]:
         roles.append('admin')
 
@@ -470,17 +478,24 @@ def submit_application():
         application_id = str(uuid.uuid4())
         now = datetime.utcnow()
 
-        # Insert application
+        # Get supervisor info for director routing
+        supervisor_name = emp_data.get('supervisor_name', '')
+
+        # Insert application with all fields - initial status is pending_director
         query = f"""
             INSERT INTO `{PROJECT_ID}.{DATASET_ID}.applications`
             (application_id, employee_name_key, employee_name, employee_email, hire_date,
              years_of_service, job_title, department, site, requested_start_date,
-             requested_end_date, duration_weeks, sabbatical_purpose, status,
+             requested_end_date, duration_weeks, leave_weeks, salary_percentage,
+             sabbatical_purpose, why_now, coverage_plan, flexible, flexibility_details,
+             manager_discussed, additional_comments, supervisor_name, status,
              submitted_at, created_at, updated_at)
             VALUES
             (@app_id, @name_key, @name, @email, @hire_date,
              @years, @job_title, @dept, @site, @start_date,
-             @end_date, @duration, @purpose, 'pending_talent',
+             @end_date, @duration, @leave_weeks, @salary_pct,
+             @purpose, @why_now, @coverage, @flexible, @flex_details,
+             @manager_discussed, @comments, @supervisor, 'pending_director',
              @now, @now, @now)
         """
 
@@ -498,7 +513,16 @@ def submit_application():
                 bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
                 bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
                 bigquery.ScalarQueryParameter("duration", "INT64", duration_weeks),
+                bigquery.ScalarQueryParameter("leave_weeks", "INT64", data.get('leave_weeks', duration_weeks)),
+                bigquery.ScalarQueryParameter("salary_pct", "INT64", data.get('salary_percentage', 100)),
                 bigquery.ScalarQueryParameter("purpose", "STRING", data.get('purpose', '')),
+                bigquery.ScalarQueryParameter("why_now", "STRING", data.get('why_now', '')),
+                bigquery.ScalarQueryParameter("coverage", "STRING", data.get('coverage_plan', '')),
+                bigquery.ScalarQueryParameter("flexible", "BOOL", data.get('flexible', False)),
+                bigquery.ScalarQueryParameter("flex_details", "STRING", data.get('flexibility_details', '')),
+                bigquery.ScalarQueryParameter("manager_discussed", "BOOL", data.get('manager_discussed', False)),
+                bigquery.ScalarQueryParameter("comments", "STRING", data.get('additional_comments', '')),
+                bigquery.ScalarQueryParameter("supervisor", "STRING", supervisor_name),
                 bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
             ]
         )
@@ -507,6 +531,23 @@ def submit_application():
 
         # Log to history
         log_history(application_id, 'submitted', email, emp_data['full_name'], 'Application submitted')
+
+        # Send notification to director (via employee's supervisor)
+        app_data = {
+            'application_id': application_id,
+            'employee_name': emp_data['full_name'],
+            'employee_email': email,
+            'job_title': emp_data['job_title'],
+            'department': emp_data['department'],
+            'site': emp_data['site'],
+            'years_of_service': emp_data['years_of_service'],
+            'requested_start_date': data['start_date'],
+            'requested_end_date': data['end_date'],
+            'duration_weeks': duration_weeks,
+            'sabbatical_purpose': data.get('purpose', '')
+        }
+        send_notification('submitted_to_talent', app_data)  # Will update template name later
+        send_notification('submitted_confirmation', app_data)
 
         return jsonify({
             'success': True,
@@ -521,7 +562,7 @@ def submit_application():
 @app.route('/api/applications/<application_id>/review', methods=['POST'])
 @login_required
 def review_application(application_id):
-    """Review an application (Talent or HR)"""
+    """Review an application (Director → Talent → CEO workflow)"""
     user = session.get('user', {})
     email = user.get('email', '')
     roles = get_user_role(email)
@@ -537,9 +578,12 @@ def review_application(application_id):
         return jsonify({'error': 'Database unavailable'}), 503
 
     try:
-        # Get current application status
+        # Get current application status and details
         query = f"""
-            SELECT status, employee_name
+            SELECT status, employee_name, employee_email, supervisor_name,
+                   job_title, department, site, years_of_service,
+                   requested_start_date, requested_end_date, duration_weeks,
+                   sabbatical_purpose, talent_notes
             FROM `{PROJECT_ID}.{DATASET_ID}.applications`
             WHERE application_id = @app_id
         """
@@ -553,15 +597,54 @@ def review_application(application_id):
         if not results:
             return jsonify({'error': 'Application not found'}), 404
 
-        current_status = results[0].status
-        employee_name = results[0].employee_name
+        row = results[0]
+        current_status = row.status
+        employee_name = row.employee_name
         now = datetime.utcnow()
 
-        # Determine which review this is
-        if current_status == 'pending_talent' and ('talent' in roles or 'admin' in roles):
-            # Talent review
+        # Build app_data for email notifications
+        app_data = {
+            'application_id': application_id,
+            'employee_name': employee_name,
+            'employee_email': row.employee_email,
+            'job_title': row.job_title,
+            'department': row.department,
+            'site': row.site,
+            'years_of_service': row.years_of_service,
+            'requested_start_date': row.requested_start_date.isoformat() if row.requested_start_date else '',
+            'requested_end_date': row.requested_end_date.isoformat() if row.requested_end_date else '',
+            'duration_weeks': row.duration_weeks,
+            'sabbatical_purpose': row.sabbatical_purpose,
+            'talent_notes': row.talent_notes or notes
+        }
+
+        # Determine which review this is based on status and user role
+        # Workflow: pending_director → pending_talent → pending_ceo → approved
+
+        if current_status == 'pending_director' and ('director' in roles or 'admin' in roles):
+            # Director review (first stage)
             if decision == 'approved':
-                new_status = 'pending_hr'
+                new_status = 'pending_talent'
+                action = 'director_approved'
+            else:
+                new_status = 'denied'
+                action = 'director_denied'
+
+            update_query = f"""
+                UPDATE `{PROJECT_ID}.{DATASET_ID}.applications`
+                SET status = @status,
+                    director_reviewer = @reviewer,
+                    director_decision = @decision,
+                    director_notes = @notes,
+                    director_reviewed_at = @now,
+                    updated_at = @now
+                WHERE application_id = @app_id
+            """
+
+        elif current_status == 'pending_talent' and ('talent' in roles or 'hr' in roles or 'admin' in roles):
+            # Talent/HR review (second stage)
+            if decision == 'approved':
+                new_status = 'pending_ceo'
                 action = 'talent_approved'
             else:
                 new_status = 'denied'
@@ -577,25 +660,27 @@ def review_application(application_id):
                     updated_at = @now
                 WHERE application_id = @app_id
             """
-        elif current_status == 'pending_hr' and ('hr' in roles or 'admin' in roles):
-            # HR review
+
+        elif current_status == 'pending_ceo' and ('ceo' in roles or 'admin' in roles):
+            # CEO review (final stage)
             if decision == 'approved':
                 new_status = 'approved'
-                action = 'hr_approved'
+                action = 'ceo_approved'
             else:
                 new_status = 'denied'
-                action = 'hr_denied'
+                action = 'ceo_denied'
 
             update_query = f"""
                 UPDATE `{PROJECT_ID}.{DATASET_ID}.applications`
                 SET status = @status,
-                    hr_reviewer = @reviewer,
-                    hr_decision = @decision,
-                    hr_notes = @notes,
-                    hr_reviewed_at = @now,
+                    ceo_reviewer = @reviewer,
+                    ceo_decision = @decision,
+                    ceo_notes = @notes,
+                    ceo_reviewed_at = @now,
                     updated_at = @now
                 WHERE application_id = @app_id
             """
+
         else:
             return jsonify({'error': 'You cannot review this application at this stage'}), 403
 
@@ -614,6 +699,20 @@ def review_application(application_id):
 
         # Log to history
         log_history(application_id, action, email, user.get('name', email), notes)
+
+        # Send appropriate notifications
+        app_data['talent_notes'] = notes  # Use current notes for notification
+        app_data['hr_notes'] = notes
+
+        if action == 'talent_approved':
+            send_notification('talent_approved', app_data)
+            # Could add notification to CEO here
+        elif action == 'talent_denied':
+            send_notification('talent_denied', app_data)
+        elif action == 'ceo_approved':
+            send_notification('hr_approved', app_data)  # Reuse the congratulations template
+        elif action == 'ceo_denied':
+            send_notification('hr_denied', app_data)  # Reuse the denial template
 
         return jsonify({
             'success': True,

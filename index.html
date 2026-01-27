@@ -549,14 +549,19 @@
             font-weight: 600;
         }
 
+        .status-pending_director {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
         .status-pending_talent {
             background: var(--warning-light);
             color: #B45309;
         }
 
-        .status-pending_hr {
-            background: #DBEAFE;
-            color: #1D4ED8;
+        .status-pending_ceo {
+            background: #E0E7FF;
+            color: #3730A3;
         }
 
         .status-approved {
@@ -853,6 +858,107 @@
             }
         }
 
+        /* Leave Options */
+        .leave-options {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .leave-option {
+            flex: 1;
+            min-width: 150px;
+            cursor: pointer;
+        }
+
+        .leave-option input {
+            display: none;
+        }
+
+        .leave-option-content {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .leave-option-content strong {
+            display: block;
+            font-size: 1.1rem;
+            color: var(--primary-navy);
+            margin-bottom: 0.5rem;
+        }
+
+        .leave-option-content .leave-pay {
+            display: block;
+            color: var(--success);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .leave-option-content .leave-benefits {
+            display: block;
+            color: var(--gray);
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .leave-option input:checked + .leave-option-content {
+            border-color: var(--accent-orange);
+            background: linear-gradient(135deg, rgba(228,119,39,0.05) 0%, rgba(228,119,39,0.1) 100%);
+            box-shadow: 0 4px 15px rgba(228,119,39,0.2);
+        }
+
+        .leave-option:hover .leave-option-content {
+            border-color: var(--secondary-blue);
+        }
+
+        /* Radio and Checkbox Groups */
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .radio-label, .checkbox-label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .checkbox-label {
+            margin-bottom: 0.75rem;
+        }
+
+        .checkbox-label input, .radio-label input {
+            margin-top: 0.2rem;
+            accent-color: var(--accent-orange);
+        }
+
+        .checkbox-group {
+            background: var(--gray-light);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: var(--warning-light);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #92400E;
+        }
+
+        .warning-box strong {
+            color: #B45309;
+        }
+
         /* Email Template Items */
         .email-template-item {
             background: var(--white);
@@ -917,9 +1023,9 @@
                 <span class="demo-label">Demo</span>
                 <select id="demoRoleSelect" class="demo-role-select hidden" onchange="changeDemoRole()">
                     <option value="staff">Staff Only</option>
+                    <option value="director">School Director</option>
                     <option value="talent">Talent Reviewer</option>
-                    <option value="hr">HR Approver</option>
-                    <option value="director">Director</option>
+                    <option value="ceo">CEO</option>
                 </select>
             </div>
             <div class="user-info" id="userInfo">
@@ -938,13 +1044,16 @@
     <!-- Navigation -->
     <nav class="nav-tabs" id="navTabs">
         <button class="nav-tab active" data-view="staff" onclick="switchView('staff')">My Sabbatical</button>
+        <button class="nav-tab hidden" data-view="director" onclick="switchView('director')">
+            Director Review <span class="badge hidden" id="directorBadge">0</span>
+        </button>
         <button class="nav-tab hidden" data-view="talent" onclick="switchView('talent')">
             Talent Review <span class="badge hidden" id="talentBadge">0</span>
         </button>
-        <button class="nav-tab hidden" data-view="hr" onclick="switchView('hr')">
-            HR Approval <span class="badge hidden" id="hrBadge">0</span>
+        <button class="nav-tab hidden" data-view="ceo" onclick="switchView('ceo')">
+            CEO Approval <span class="badge hidden" id="ceoBadge">0</span>
         </button>
-        <button class="nav-tab hidden" data-view="director" onclick="switchView('director')">Team Status</button>
+        <button class="nav-tab hidden" data-view="team" onclick="switchView('team')">Team Status</button>
         <button class="nav-tab hidden" data-view="all" onclick="switchView('all')">All Applications</button>
         <button class="nav-tab hidden" data-view="emails" onclick="switchView('emails')">Email Templates</button>
     </nav>
@@ -999,13 +1108,46 @@
             </div>
         </div>
 
-        <!-- Director View -->
+        <!-- Director Review View (for pending_director status) -->
         <div id="directorView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Pending Director Approval</h3>
+                </div>
+                <p style="color: var(--gray); margin-bottom: 1rem;">
+                    Applications from your direct reports awaiting your review. This is the first step in the approval process.
+                </p>
+                <div id="directorApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CEO View -->
+        <div id="ceoView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Pending CEO Approval</h3>
+                </div>
+                <p style="color: var(--gray); margin-bottom: 1rem;">
+                    Applications that have been approved by Director and Talent, awaiting final CEO approval.
+                </p>
+                <div id="ceoApplicationsList" class="application-list">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Status View (for directors to see team sabbaticals) -->
+        <div id="teamView" class="view hidden">
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">Team Sabbaticals</h3>
                 </div>
-                <div id="directorApplicationsList" class="application-list">
+                <p style="color: var(--gray); margin-bottom: 1rem;">
+                    View approved and upcoming sabbaticals for your team members for planning purposes.
+                </p>
+                <div id="teamApplicationsList" class="application-list">
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
             </div>
@@ -1018,8 +1160,9 @@
                     <h3 class="card-title">All Applications</h3>
                     <select class="form-select" style="width: auto;" onchange="filterApplications(this.value)">
                         <option value="">All Statuses</option>
+                        <option value="pending_director">Pending Director</option>
                         <option value="pending_talent">Pending Talent</option>
-                        <option value="pending_hr">Pending HR</option>
+                        <option value="pending_ceo">Pending CEO</option>
                         <option value="approved">Approved</option>
                         <option value="denied">Denied</option>
                         <option value="withdrawn">Withdrawn</option>
@@ -1154,53 +1297,187 @@
 
     <!-- Application Modal -->
     <div id="applicationModal" class="modal-overlay hidden">
-        <div class="modal">
+        <div class="modal" style="max-width: 700px;">
             <div class="modal-header">
-                <h2>Apply for Sabbatical</h2>
+                <h2>Apply for Sabbatical Leave</h2>
                 <button class="modal-close" onclick="closeApplicationModal()">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Program Info Box -->
+                <div class="info-box" style="background: var(--primary-navy); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleInfoBox()">
+                        <strong>Program Requirements</strong>
+                        <span id="infoBoxToggle">▼</span>
+                    </div>
+                    <div id="infoBoxContent" style="margin-top: 1rem; font-size: 0.9rem; line-height: 1.6;">
+                        <ul style="margin: 0; padding-left: 1.25rem;">
+                            <li>Eligibility: 10 consecutive years of full-time service</li>
+                            <li>Must apply at least 6 months in advance</li>
+                            <li>Commit to remain at FLS for 1 full academic year after return</li>
+                            <li>Cannot take full-time employment elsewhere during sabbatical</li>
+                            <li>Only one sabbatical per school site at a time</li>
+                            <li>Questions? <a href="mailto:talent@firstlineschools.org" style="color: var(--orange-light);">talent@firstlineschools.org</a></li>
+                        </ul>
+                    </div>
+                </div>
+
                 <form id="applicationForm" onsubmit="submitApplication(event)">
+                    <!-- Employee Info (Auto-filled) -->
                     <div class="form-group">
-                        <label class="form-label">Employee</label>
-                        <div id="employeeDisplay" style="padding: 0.75rem; background: var(--gray-light); border-radius: 8px;">
+                        <label class="form-label">Employee Information</label>
+                        <div id="employeeDisplay" style="padding: 1rem; background: var(--gray-light); border-radius: 8px;">
                             <strong id="empName">Loading...</strong>
-                            <div style="color: var(--gray); font-size: 0.9rem;">
+                            <div style="color: var(--gray); font-size: 0.9rem; margin-top: 0.25rem;">
                                 <span id="empTitle"></span> | <span id="empSite"></span>
                             </div>
                             <div style="margin-top: 0.5rem;">
-                                <span class="years-badge" id="empYears">0 Years</span>
+                                <span class="years-badge" id="empYears">0 Years of Service</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" class="form-input" id="startDate" required onchange="checkConflicts()">
+                    <!-- Leave Option Selection -->
+                    <div class="form-group">
+                        <label class="form-label">Which sabbatical option are you choosing? *</label>
+                        <div class="leave-options">
+                            <label class="leave-option">
+                                <input type="radio" name="leaveOption" value="8" required onchange="updateLeaveSelection()">
+                                <div class="leave-option-content">
+                                    <strong>8 Weeks</strong>
+                                    <span class="leave-pay">100% Salary</span>
+                                    <span class="leave-benefits">100% Benefits</span>
+                                </div>
+                            </label>
+                            <label class="leave-option">
+                                <input type="radio" name="leaveOption" value="10" onchange="updateLeaveSelection()">
+                                <div class="leave-option-content">
+                                    <strong>10 Weeks</strong>
+                                    <span class="leave-pay">80% Salary</span>
+                                    <span class="leave-benefits">100% Benefits</span>
+                                </div>
+                            </label>
+                            <label class="leave-option">
+                                <input type="radio" name="leaveOption" value="12" onchange="updateLeaveSelection()">
+                                <div class="leave-option-content">
+                                    <strong>12 Weeks</strong>
+                                    <span class="leave-pay">67% Salary</span>
+                                    <span class="leave-benefits">100% Benefits</span>
+                                </div>
+                            </label>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">End Date</label>
-                            <input type="date" class="form-input" id="endDate" required onchange="checkConflicts()">
+                        <p class="form-hint">FLS holiday time (e.g., winter break) can be paired to extend your experience.</p>
+                    </div>
+
+                    <!-- Preferred Dates -->
+                    <div class="form-group">
+                        <label class="form-label">What are your preferred dates? *</label>
+                        <div class="form-row">
+                            <div>
+                                <label style="font-size: 0.85rem; color: var(--gray);">Start Date</label>
+                                <input type="date" class="form-input" id="startDate" required onchange="validateDates()">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.85rem; color: var(--gray);">End Date</label>
+                                <input type="date" class="form-input" id="endDate" required onchange="validateDates()">
+                            </div>
+                        </div>
+                        <p class="form-hint">Must be at least 6 months from today. Include any pairing with holiday breaks.</p>
+                        <div id="dateWarning" class="warning-box hidden">
+                            <strong>Warning:</strong> <span id="dateWarningText"></span>
                         </div>
                     </div>
 
+                    <!-- Site Conflict Warning -->
                     <div id="conflictWarning" class="conflict-warning hidden">
                         <h4>Site Conflict Warning</h4>
                         <p id="conflictDetails"></p>
                     </div>
 
+                    <!-- Flexibility -->
                     <div class="form-group">
-                        <label class="form-label">How do you plan to spend your sabbatical?</label>
-                        <textarea class="form-textarea" id="sabbaticalPurpose" required
-                            placeholder="Share your plans - travel, family time, personal projects, rest and rejuvenation..."></textarea>
-                        <p class="form-hint">This helps us celebrate your journey!</p>
+                        <label class="form-label">Are you flexible with your dates? *</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="flexible" value="yes" required onchange="toggleFlexibilityExplanation()"> Yes
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="flexible" value="no" onchange="toggleFlexibilityExplanation()"> No
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group hidden" id="flexibilityExplanation">
+                        <label class="form-label">Please explain your flexibility</label>
+                        <textarea class="form-textarea" id="flexibilityDetails" rows="2"
+                            placeholder="What alternative dates would work for you?"></textarea>
+                    </div>
+
+                    <!-- Purpose -->
+                    <div class="form-group">
+                        <label class="form-label">What is the main purpose of your sabbatical? *</label>
+                        <textarea class="form-textarea" id="sabbaticalPurpose" required rows="3"
+                            placeholder="Rest and renewal are absolutely valid! Examples: travel, family time, professional development, personal projects, service work."></textarea>
+                    </div>
+
+                    <!-- Why Now -->
+                    <div class="form-group">
+                        <label class="form-label">Describe why this is the right time for you to take a sabbatical. *</label>
+                        <textarea class="form-textarea" id="whyNow" required rows="3"
+                            placeholder="What makes this timing ideal for you personally and professionally?"></textarea>
+                    </div>
+
+                    <!-- Coverage Plan -->
+                    <div class="form-group">
+                        <label class="form-label">How will your responsibilities be covered while you are away? *</label>
+                        <textarea class="form-textarea" id="coveragePlan" required rows="3"
+                            placeholder="Required for Leaders and Network staff. All others may put N/A."></textarea>
+                        <p class="form-hint">Describe how your work will be distributed or who will cover your responsibilities.</p>
+                    </div>
+
+                    <!-- Manager Discussion -->
+                    <div class="form-group">
+                        <label class="form-label">Have you had a conversation with your School Director or Manager about this? *</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="managerDiscussed" value="yes" required> Yes
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="managerDiscussed" value="no"> Not Yet
+                            </label>
+                        </div>
+                        <p class="form-hint" id="managerHint">We recommend discussing with your supervisor before submitting.</p>
+                    </div>
+
+                    <!-- Acknowledgments -->
+                    <div class="form-group">
+                        <label class="form-label">Acknowledgments *</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="ack1" required>
+                                <span>I understand I must commit to remain at FirstLine Schools for one full academic year following my sabbatical.</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="ack2" required>
+                                <span>I understand I cannot take full-time employment elsewhere during my sabbatical.</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="ack3" required>
+                                <span>I understand I will submit a brief reflection report within 3 months of my return.</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Additional Comments -->
+                    <div class="form-group">
+                        <label class="form-label">Additional Comments (Optional)</label>
+                        <textarea class="form-textarea" id="additionalComments" rows="2"
+                            placeholder="Any other information you'd like to share..."></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeApplicationModal()">Cancel</button>
-                <button class="btn btn-orange" onclick="submitApplication(event)">Submit Application</button>
+                <button class="btn btn-orange" onclick="submitApplication(event)">Submit Sabbatical Request</button>
             </div>
         </div>
     </div>
@@ -1305,21 +1582,23 @@
             const roles = currentUser.roles;
 
             // Hide all special tabs first
-            document.querySelector('[data-view="talent"]').classList.add('hidden');
-            document.querySelector('[data-view="hr"]').classList.add('hidden');
             document.querySelector('[data-view="director"]').classList.add('hidden');
+            document.querySelector('[data-view="talent"]').classList.add('hidden');
+            document.querySelector('[data-view="ceo"]').classList.add('hidden');
+            document.querySelector('[data-view="team"]').classList.add('hidden');
             document.querySelector('[data-view="all"]').classList.add('hidden');
             document.querySelector('[data-view="emails"]').classList.add('hidden');
 
             // Show based on roles
-            if (roles.includes('talent') || roles.includes('admin')) {
+            if (roles.includes('director') || roles.includes('admin')) {
+                document.querySelector('[data-view="director"]').classList.remove('hidden');
+                document.querySelector('[data-view="team"]').classList.remove('hidden');
+            }
+            if (roles.includes('talent') || roles.includes('hr') || roles.includes('admin')) {
                 document.querySelector('[data-view="talent"]').classList.remove('hidden');
             }
-            if (roles.includes('hr') || roles.includes('admin')) {
-                document.querySelector('[data-view="hr"]').classList.remove('hidden');
-            }
-            if (roles.includes('director')) {
-                document.querySelector('[data-view="director"]').classList.remove('hidden');
+            if (roles.includes('ceo') || roles.includes('admin')) {
+                document.querySelector('[data-view="ceo"]').classList.remove('hidden');
             }
             if (roles.includes('admin')) {
                 document.querySelector('[data-view="all"]').classList.remove('hidden');
@@ -1356,14 +1635,14 @@
                 case 'staff':
                     currentUser.roles = ['staff'];
                     break;
-                case 'talent':
-                    currentUser.roles = ['staff', 'talent'];
-                    break;
-                case 'hr':
-                    currentUser.roles = ['staff', 'hr'];
-                    break;
                 case 'director':
                     currentUser.roles = ['staff', 'director'];
+                    break;
+                case 'talent':
+                    currentUser.roles = ['staff', 'talent', 'hr'];
+                    break;
+                case 'ceo':
+                    currentUser.roles = ['staff', 'ceo'];
                     break;
             }
 
@@ -1376,6 +1655,7 @@
         }
 
         // Demo data - sample applications for demonstration
+        // Workflow: pending_director → pending_talent → pending_ceo → approved
         const demoApplications = [
             {
                 application_id: 'demo-1',
@@ -1385,11 +1665,13 @@
                 job_title: 'Lead Teacher',
                 department: 'Academics',
                 site: 'Samuel J. Green Charter School',
+                leave_weeks: 10,
+                salary_percentage: 80,
                 requested_start_date: '2026-06-01',
                 requested_end_date: '2026-08-15',
                 duration_weeks: 11,
-                sabbatical_purpose: 'I plan to travel to Spain to immerse myself in the language and culture, which will enhance my Spanish instruction when I return. I also want to spend quality time with my aging parents.',
-                status: 'pending_talent',
+                sabbatical_purpose: 'I plan to travel to Spain to immerse myself in the language and culture, which will enhance my Spanish instruction when I return.',
+                status: 'pending_director',
                 submitted_at: '2026-01-15T10:30:00Z'
             },
             {
@@ -1400,16 +1682,18 @@
                 job_title: 'Operations Manager',
                 department: 'Operations',
                 site: 'Arthur Ashe Charter School',
+                leave_weeks: 12,
+                salary_percentage: 67,
                 requested_start_date: '2026-07-01',
                 requested_end_date: '2026-09-30',
                 duration_weeks: 13,
-                sabbatical_purpose: 'After 12 years of dedicated service, I want to write a book about effective school operations and spend time mentoring young professionals in my community.',
-                status: 'pending_hr',
+                sabbatical_purpose: 'After 12 years of dedicated service, I want to write a book about effective school operations.',
+                status: 'pending_talent',
                 submitted_at: '2026-01-10T14:20:00Z',
-                talent_reviewer: 'sshirey@firstlineschools.org',
-                talent_decision: 'approved',
-                talent_notes: 'Strong candidate with excellent service record.',
-                talent_reviewed_at: '2026-01-12T09:15:00Z'
+                director_reviewer: 'principal@firstlineschools.org',
+                director_decision: 'approved',
+                director_notes: 'Strong leader, approved for sabbatical.',
+                director_reviewed_at: '2026-01-12T09:15:00Z'
             },
             {
                 application_id: 'demo-3',
@@ -1419,54 +1703,93 @@
                 job_title: 'School Counselor',
                 department: 'Student Services',
                 site: 'Langston Hughes Academy',
+                leave_weeks: 12,
+                salary_percentage: 67,
                 requested_start_date: '2026-03-01',
                 requested_end_date: '2026-05-31',
                 duration_weeks: 13,
-                sabbatical_purpose: 'I will be completing my doctoral dissertation on trauma-informed practices in urban schools. This research will directly benefit our students and staff.',
-                status: 'approved',
+                sabbatical_purpose: 'Completing doctoral dissertation on trauma-informed practices in urban schools.',
+                status: 'pending_ceo',
                 submitted_at: '2025-11-20T08:45:00Z',
+                director_reviewer: 'director@firstlineschools.org',
+                director_decision: 'approved',
+                director_notes: 'Excellent candidate.',
+                director_reviewed_at: '2025-11-22T11:30:00Z',
                 talent_reviewer: 'sshirey@firstlineschools.org',
                 talent_decision: 'approved',
-                talent_notes: 'Excellent application. Research will benefit FLS.',
-                talent_reviewed_at: '2025-11-22T11:30:00Z',
-                hr_reviewer: 'brichardson@firstlineschools.org',
-                hr_decision: 'approved',
-                hr_notes: 'Coverage plan approved. Congratulations!',
-                hr_reviewed_at: '2025-11-25T15:00:00Z'
+                talent_notes: 'Research will benefit FLS. Recommend approval.',
+                talent_reviewed_at: '2025-11-24T15:00:00Z'
             },
             {
                 application_id: 'demo-4',
-                employee_name: 'Robert Thompson',
-                employee_email: 'rthompson@firstlineschools.org',
-                years_of_service: 11.1,
-                job_title: 'Math Teacher',
-                department: 'Academics',
-                site: 'Samuel J. Green Charter School',
-                requested_start_date: '2026-01-15',
-                requested_end_date: '2026-03-15',
-                duration_weeks: 8,
-                sabbatical_purpose: 'Personal rejuvenation and family time after a decade of service.',
-                status: 'denied',
-                submitted_at: '2025-10-05T13:00:00Z',
-                talent_reviewer: 'sshirey@firstlineschools.org',
-                talent_decision: 'denied',
-                talent_notes: 'Timing conflicts with state testing window. Please reapply for summer dates.',
-                talent_reviewed_at: '2025-10-08T10:00:00Z'
-            },
-            {
-                application_id: 'demo-5',
                 employee_name: 'Angela Davis',
                 employee_email: 'adavis@firstlineschools.org',
                 years_of_service: 14.5,
                 job_title: 'Assistant Principal',
                 department: 'Administration',
                 site: 'Arthur Ashe Charter School',
+                leave_weeks: 8,
+                salary_percentage: 100,
                 requested_start_date: '2026-06-15',
                 requested_end_date: '2026-08-01',
                 duration_weeks: 7,
-                sabbatical_purpose: 'I want to visit schools in Finland and Singapore to study their educational systems and bring back innovative practices to FirstLine.',
-                status: 'pending_talent',
-                submitted_at: '2026-01-20T16:45:00Z'
+                sabbatical_purpose: 'Visit schools in Finland and Singapore to study educational systems.',
+                status: 'approved',
+                submitted_at: '2025-10-01T16:45:00Z',
+                director_reviewer: 'director@firstlineschools.org',
+                director_decision: 'approved',
+                director_notes: 'Great initiative.',
+                director_reviewed_at: '2025-10-03T09:00:00Z',
+                talent_reviewer: 'sshirey@firstlineschools.org',
+                talent_decision: 'approved',
+                talent_notes: 'Will bring valuable insights back.',
+                talent_reviewed_at: '2025-10-05T11:00:00Z',
+                ceo_reviewer: 'tcole@firstlineschools.org',
+                ceo_decision: 'approved',
+                ceo_notes: 'Congratulations! Enjoy your sabbatical.',
+                ceo_reviewed_at: '2025-10-07T14:00:00Z'
+            },
+            {
+                application_id: 'demo-5',
+                employee_name: 'Robert Thompson',
+                employee_email: 'rthompson@firstlineschools.org',
+                years_of_service: 11.1,
+                job_title: 'Math Teacher',
+                department: 'Academics',
+                site: 'Samuel J. Green Charter School',
+                leave_weeks: 8,
+                salary_percentage: 100,
+                requested_start_date: '2026-01-15',
+                requested_end_date: '2026-03-15',
+                duration_weeks: 8,
+                sabbatical_purpose: 'Personal rejuvenation and family time after a decade of service.',
+                status: 'denied',
+                submitted_at: '2025-10-05T13:00:00Z',
+                director_reviewer: 'director@firstlineschools.org',
+                director_decision: 'approved',
+                director_notes: 'Approved.',
+                director_reviewed_at: '2025-10-07T10:00:00Z',
+                talent_reviewer: 'sshirey@firstlineschools.org',
+                talent_decision: 'denied',
+                talent_notes: 'Timing conflicts with state testing window. Please reapply for summer dates.',
+                talent_reviewed_at: '2025-10-08T10:00:00Z'
+            },
+            {
+                application_id: 'demo-6',
+                employee_name: 'Sandra Williams',
+                employee_email: 'swilliams@firstlineschools.org',
+                years_of_service: 16.8,
+                job_title: 'Special Education Coordinator',
+                department: 'Student Services',
+                site: 'Phillis Wheatley Community School',
+                leave_weeks: 10,
+                salary_percentage: 80,
+                requested_start_date: '2026-05-15',
+                requested_end_date: '2026-07-31',
+                duration_weeks: 11,
+                sabbatical_purpose: 'Attend specialized training and certification programs for autism spectrum disorders.',
+                status: 'pending_director',
+                submitted_at: '2026-01-22T11:00:00Z'
             }
         ];
 
@@ -1491,11 +1814,24 @@
             document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
             document.getElementById(view + 'View').classList.remove('hidden');
 
-            // Load view data
-            if (view === 'talent') loadTalentApplications();
-            else if (view === 'hr') loadHRApplications();
-            else if (view === 'director') loadDirectorApplications();
-            else if (view === 'all') loadAllApplications();
+            // Load view data based on view type
+            switch (view) {
+                case 'director':
+                    loadDirectorApplications();
+                    break;
+                case 'talent':
+                    loadTalentApplications();
+                    break;
+                case 'ceo':
+                    loadCEOApplications();
+                    break;
+                case 'team':
+                    loadTeamApplications();
+                    break;
+                case 'all':
+                    loadAllApplications();
+                    break;
+            }
         }
 
         // Load eligibility
@@ -1651,12 +1987,70 @@
 
             // Use demo data if in demo mode
             if (demoMode) {
-                // Show applications from "team members"
+                // Show applications pending director approval
+                const apps = getDemoApplications('pending_director');
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending your review</p></div>';
+                } else {
+                    container.innerHTML = apps.map(app => renderApplication(app, true)).join('');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/applications?status=pending_director');
+                const data = await response.json();
+
+                if (data.applications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending your review</p></div>';
+                } else {
+                    container.innerHTML = data.applications.map(app => renderApplication(app, true)).join('');
+                }
+            } catch (error) {
+                console.error('Load director apps error:', error);
+            }
+        }
+
+        async function loadCEOApplications() {
+            const container = document.getElementById('ceoApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                // Show applications pending CEO approval
+                const apps = getDemoApplications('pending_ceo');
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending your approval</p></div>';
+                } else {
+                    container.innerHTML = apps.map(app => renderApplication(app, true)).join('');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/applications?status=pending_ceo');
+                const data = await response.json();
+
+                if (data.applications.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No applications pending your approval</p></div>';
+                } else {
+                    container.innerHTML = data.applications.map(app => renderApplication(app, true)).join('');
+                }
+            } catch (error) {
+                console.error('Load CEO apps error:', error);
+            }
+        }
+
+        async function loadTeamApplications() {
+            const container = document.getElementById('teamApplicationsList');
+
+            // Use demo data if in demo mode
+            if (demoMode) {
+                // Show approved applications for team planning
                 const apps = demoApplications.filter(app =>
-                    app.site === 'Arthur Ashe Charter School' || app.site === 'Samuel J. Green Charter School'
+                    app.status === 'approved' || app.status === 'pending_ceo'
                 );
                 if (apps.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><p>No team sabbaticals</p></div>';
+                    container.innerHTML = '<div class="empty-state"><p>No team sabbaticals scheduled</p></div>';
                 } else {
                     container.innerHTML = apps.map(app => renderApplication(app, false)).join('');
                 }
@@ -1667,13 +2061,18 @@
                 const response = await fetch('/api/applications');
                 const data = await response.json();
 
-                if (data.applications.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><p>No team sabbaticals</p></div>';
+                // Filter for approved or pending_ceo status for planning
+                const apps = data.applications.filter(app =>
+                    app.status === 'approved' || app.status === 'pending_ceo'
+                );
+
+                if (apps.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><p>No team sabbaticals scheduled</p></div>';
                 } else {
-                    container.innerHTML = data.applications.map(app => renderApplication(app, false)).join('');
+                    container.innerHTML = apps.map(app => renderApplication(app, false)).join('');
                 }
             } catch (error) {
-                console.error('Load director apps error:', error);
+                console.error('Load team apps error:', error);
             }
         }
 
@@ -1713,16 +2112,18 @@
         // Render application card
         function renderApplication(app, showReviewButton) {
             const statusLabels = {
+                'pending_director': 'Pending Director Review',
                 'pending_talent': 'Pending Talent Review',
-                'pending_hr': 'Pending HR Approval',
+                'pending_ceo': 'Pending CEO Approval',
                 'approved': 'Approved',
                 'denied': 'Denied',
                 'withdrawn': 'Withdrawn'
             };
 
             const canReview = showReviewButton && (
-                (app.status === 'pending_talent' && (currentUser.roles.includes('talent') || currentUser.roles.includes('admin'))) ||
-                (app.status === 'pending_hr' && (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')))
+                (app.status === 'pending_director' && (currentUser.roles.includes('director') || currentUser.roles.includes('admin'))) ||
+                (app.status === 'pending_talent' && (currentUser.roles.includes('talent') || currentUser.roles.includes('hr') || currentUser.roles.includes('admin'))) ||
+                (app.status === 'pending_ceo' && (currentUser.roles.includes('ceo') || currentUser.roles.includes('admin')))
             );
 
             return `
@@ -1753,12 +2154,23 @@
         // Update badges
         async function updateBadges() {
             try {
+                const directorBadge = document.getElementById('directorBadge');
+                const talentBadge = document.getElementById('talentBadge');
+                const ceoBadge = document.getElementById('ceoBadge');
+
                 // Use demo data counts if in demo mode
                 if (demoMode) {
-                    const talentBadge = document.getElementById('talentBadge');
-                    const hrBadge = document.getElementById('hrBadge');
+                    if (currentUser.roles.includes('director') || currentUser.roles.includes('admin')) {
+                        const directorCount = getDemoApplications('pending_director').length;
+                        if (directorCount > 0) {
+                            directorBadge.textContent = directorCount;
+                            directorBadge.classList.remove('hidden');
+                        } else {
+                            directorBadge.classList.add('hidden');
+                        }
+                    }
 
-                    if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
+                    if (currentUser.roles.includes('talent') || currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
                         const talentCount = getDemoApplications('pending_talent').length;
                         if (talentCount > 0) {
                             talentBadge.textContent = talentCount;
@@ -1768,35 +2180,49 @@
                         }
                     }
 
-                    if (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
-                        const hrCount = getDemoApplications('pending_hr').length;
-                        if (hrCount > 0) {
-                            hrBadge.textContent = hrCount;
-                            hrBadge.classList.remove('hidden');
+                    if (currentUser.roles.includes('ceo') || currentUser.roles.includes('admin')) {
+                        const ceoCount = getDemoApplications('pending_ceo').length;
+                        if (ceoCount > 0) {
+                            ceoBadge.textContent = ceoCount;
+                            ceoBadge.classList.remove('hidden');
                         } else {
-                            hrBadge.classList.add('hidden');
+                            ceoBadge.classList.add('hidden');
                         }
                     }
                     return;
                 }
 
-                if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
-                    const response = await fetch('/api/applications?status=pending_talent');
+                // Fetch from API
+                if (currentUser.roles.includes('director') || currentUser.roles.includes('admin')) {
+                    const response = await fetch('/api/applications?status=pending_director');
                     const data = await response.json();
-                    const badge = document.getElementById('talentBadge');
                     if (data.applications.length > 0) {
-                        badge.textContent = data.applications.length;
-                        badge.classList.remove('hidden');
+                        directorBadge.textContent = data.applications.length;
+                        directorBadge.classList.remove('hidden');
+                    } else {
+                        directorBadge.classList.add('hidden');
                     }
                 }
 
-                if (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
-                    const response = await fetch('/api/applications?status=pending_hr');
+                if (currentUser.roles.includes('talent') || currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
+                    const response = await fetch('/api/applications?status=pending_talent');
                     const data = await response.json();
-                    const badge = document.getElementById('hrBadge');
                     if (data.applications.length > 0) {
-                        badge.textContent = data.applications.length;
-                        badge.classList.remove('hidden');
+                        talentBadge.textContent = data.applications.length;
+                        talentBadge.classList.remove('hidden');
+                    } else {
+                        talentBadge.classList.add('hidden');
+                    }
+                }
+
+                if (currentUser.roles.includes('ceo') || currentUser.roles.includes('admin')) {
+                    const response = await fetch('/api/applications?status=pending_ceo');
+                    const data = await response.json();
+                    if (data.applications.length > 0) {
+                        ceoBadge.textContent = data.applications.length;
+                        ceoBadge.classList.remove('hidden');
+                    } else {
+                        ceoBadge.classList.add('hidden');
                     }
                 }
             } catch (error) {
@@ -1827,6 +2253,77 @@
             document.getElementById('applicationModal').classList.add('hidden');
             document.getElementById('applicationForm').reset();
             document.getElementById('conflictWarning').classList.add('hidden');
+            document.getElementById('dateWarning').classList.add('hidden');
+            document.getElementById('flexibilityExplanation').classList.add('hidden');
+        }
+
+        // Form helper functions
+        function toggleInfoBox() {
+            const content = document.getElementById('infoBoxContent');
+            const toggle = document.getElementById('infoBoxToggle');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        function updateLeaveSelection() {
+            // Visual feedback is handled by CSS
+            // Could add additional logic here if needed
+        }
+
+        function validateDates() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const warningBox = document.getElementById('dateWarning');
+            const warningText = document.getElementById('dateWarningText');
+
+            if (!startDate) return;
+
+            const start = new Date(startDate);
+            const today = new Date();
+            const sixMonthsFromNow = new Date();
+            sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6);
+
+            let warnings = [];
+
+            // Check 6-month rule
+            if (start < sixMonthsFromNow) {
+                const monthsAway = Math.round((start - today) / (1000 * 60 * 60 * 24 * 30));
+                warnings.push(`Start date is only ${monthsAway} months away. Applications should be submitted 6+ months in advance.`);
+            }
+
+            // Check end date is after start
+            if (endDate) {
+                const end = new Date(endDate);
+                if (end <= start) {
+                    warnings.push('End date must be after start date.');
+                }
+            }
+
+            if (warnings.length > 0) {
+                warningText.textContent = warnings.join(' ');
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
+
+            // Also check for site conflicts
+            checkConflicts();
+        }
+
+        function toggleFlexibilityExplanation() {
+            const flexible = document.querySelector('input[name="flexible"]:checked');
+            const explanationDiv = document.getElementById('flexibilityExplanation');
+
+            if (flexible && flexible.value === 'yes') {
+                explanationDiv.classList.remove('hidden');
+            } else {
+                explanationDiv.classList.add('hidden');
+            }
         }
 
         async function checkConflicts() {
@@ -1858,10 +2355,54 @@
         async function submitApplication(event) {
             event.preventDefault();
 
+            // Validate all checkboxes are checked
+            if (!document.getElementById('ack1').checked ||
+                !document.getElementById('ack2').checked ||
+                !document.getElementById('ack3').checked) {
+                alert('Please acknowledge all required statements before submitting.');
+                return;
+            }
+
+            // Get leave option
+            const leaveOption = document.querySelector('input[name="leaveOption"]:checked');
+            if (!leaveOption) {
+                alert('Please select a sabbatical leave option.');
+                return;
+            }
+
+            // Get flexibility
+            const flexible = document.querySelector('input[name="flexible"]:checked');
+            if (!flexible) {
+                alert('Please indicate your date flexibility.');
+                return;
+            }
+
+            // Get manager discussion
+            const managerDiscussed = document.querySelector('input[name="managerDiscussed"]:checked');
+            if (!managerDiscussed) {
+                alert('Please indicate whether you have discussed this with your manager.');
+                return;
+            }
+
+            // Salary percentage based on leave length
+            const salaryPercentage = {
+                '8': 100,
+                '10': 80,
+                '12': 67
+            };
+
             const data = {
                 start_date: document.getElementById('startDate').value,
                 end_date: document.getElementById('endDate').value,
-                purpose: document.getElementById('sabbaticalPurpose').value
+                leave_weeks: parseInt(leaveOption.value),
+                salary_percentage: salaryPercentage[leaveOption.value],
+                purpose: document.getElementById('sabbaticalPurpose').value,
+                why_now: document.getElementById('whyNow').value,
+                coverage_plan: document.getElementById('coveragePlan').value,
+                flexible: flexible.value === 'yes',
+                flexibility_details: document.getElementById('flexibilityDetails')?.value || '',
+                manager_discussed: managerDiscussed.value === 'yes',
+                additional_comments: document.getElementById('additionalComments').value
             };
 
             try {
@@ -1877,7 +2418,9 @@
                     closeApplicationModal();
                     loadMyApplications();
                     showConfetti();
-                    alert('Application submitted successfully!');
+
+                    // Show success message with what's next
+                    alert(`Application submitted successfully!\n\nApplication ID: ${result.application_id}\n\nNext Steps:\n1. School Director Review\n2. Talent/HR Review\n3. CEO Approval\n\nYou'll receive email updates at each step.`);
                 } else {
                     alert(result.error || 'Failed to submit application');
                 }
