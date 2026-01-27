@@ -133,14 +133,33 @@ def is_director(email):
     if not client:
         return False
     try:
-        query = f"""
-            SELECT COUNT(*) as report_count
+        # Get the user's name first, then check if anyone reports to them
+        name_query = f"""
+            SELECT CONCAT(First_Name, ' ', Last_Name) as full_name
             FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
-            WHERE LOWER(Supervisor_Email) = LOWER(@email)
+            WHERE LOWER(Email_Address) = LOWER(@email)
+            LIMIT 1
         """
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("email", "STRING", email)
+            ]
+        )
+        name_results = list(client.query(name_query, job_config=job_config).result())
+        if not name_results:
+            return False
+
+        user_name = name_results[0].full_name
+
+        # Check if anyone has this person as their supervisor
+        query = f"""
+            SELECT COUNT(*) as report_count
+            FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
+            WHERE Supervisor_Name__Unsecured_ = @name
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("name", "STRING", user_name)
             ]
         )
         results = list(client.query(query, job_config=job_config).result())
@@ -231,19 +250,19 @@ def employee_lookup():
     try:
         query = f"""
             SELECT
-                name_key,
+                Employee_Number as name_key,
                 First_Name,
                 Last_Name,
                 CONCAT(First_Name, ' ', Last_Name) as full_name,
-                Email,
-                Hire_Date,
-                DATE_DIFF(CURRENT_DATE(), Hire_Date, DAY) / 365.25 as years_of_service,
+                Email_Address,
+                Last_Hire_Date,
+                DATE_DIFF(CURRENT_DATE(), Last_Hire_Date, DAY) / 365.25 as years_of_service,
                 Job_Title,
                 Function as department,
-                Site,
-                Supervisor_Email
+                Location_Name as site,
+                Supervisor_Name__Unsecured_
             FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
-            WHERE LOWER(Email) = LOWER(@email)
+            WHERE LOWER(Email_Address) = LOWER(@email)
             LIMIT 1
         """
         job_config = bigquery.QueryJobConfig(
@@ -262,13 +281,13 @@ def employee_lookup():
             'first_name': row.First_Name,
             'last_name': row.Last_Name,
             'full_name': row.full_name,
-            'email': row.Email,
-            'hire_date': row.Hire_Date.isoformat() if row.Hire_Date else None,
+            'email': row.Email_Address,
+            'hire_date': row.Last_Hire_Date.isoformat() if row.Last_Hire_Date else None,
             'years_of_service': round(row.years_of_service, 1) if row.years_of_service else 0,
             'job_title': row.Job_Title,
             'department': row.department,
-            'site': row.Site,
-            'supervisor_email': row.Supervisor_Email
+            'site': row.site,
+            'supervisor_name': row.Supervisor_Name__Unsecured_
         })
     except Exception as e:
         logger.error(f"Employee lookup error: {e}")
@@ -288,10 +307,10 @@ def eligibility_check():
         query = f"""
             SELECT
                 CONCAT(First_Name, ' ', Last_Name) as full_name,
-                Hire_Date,
-                DATE_DIFF(CURRENT_DATE(), Hire_Date, DAY) / 365.25 as years_of_service
+                Last_Hire_Date,
+                DATE_DIFF(CURRENT_DATE(), Last_Hire_Date, DAY) / 365.25 as years_of_service
             FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
-            WHERE LOWER(Email) = LOWER(@email)
+            WHERE LOWER(Email_Address) = LOWER(@email)
             LIMIT 1
         """
         job_config = bigquery.QueryJobConfig(
@@ -313,7 +332,7 @@ def eligibility_check():
             'years_of_service': round(years, 1),
             'years_required': ELIGIBILITY_YEARS,
             'years_until_eligible': max(0, round(ELIGIBILITY_YEARS - years, 1)),
-            'hire_date': row.Hire_Date.isoformat() if row.Hire_Date else None
+            'hire_date': row.Last_Hire_Date.isoformat() if row.Last_Hire_Date else None
         })
     except Exception as e:
         logger.error(f"Eligibility check error: {e}")
@@ -786,15 +805,15 @@ def get_employee_data(email):
     try:
         query = f"""
             SELECT
-                name_key,
+                Employee_Number as name_key,
                 CONCAT(First_Name, ' ', Last_Name) as full_name,
-                Hire_Date as hire_date,
-                DATE_DIFF(CURRENT_DATE(), Hire_Date, DAY) / 365.25 as years_of_service,
+                Last_Hire_Date as hire_date,
+                DATE_DIFF(CURRENT_DATE(), Last_Hire_Date, DAY) / 365.25 as years_of_service,
                 Job_Title as job_title,
                 Function as department,
-                Site as site
+                Location_Name as site
             FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
-            WHERE LOWER(Email) = LOWER(@email)
+            WHERE LOWER(Email_Address) = LOWER(@email)
             LIMIT 1
         """
         job_config = bigquery.QueryJobConfig(
