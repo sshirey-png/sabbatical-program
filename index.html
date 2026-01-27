@@ -944,6 +944,36 @@
             border-radius: 8px;
         }
 
+        /* Eligibility Flags */
+        .flags-container {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        .flag {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .flag-red {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .flag-yellow {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .flag-green {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
         /* Warning Box */
         .warning-box {
             background: var(--warning-light);
@@ -2126,6 +2156,37 @@
                 (app.status === 'pending_ceo' && (currentUser.roles.includes('ceo') || currentUser.roles.includes('admin')))
             );
 
+            // Build eligibility flags
+            let flags = [];
+
+            // Check years of service
+            if (app.years_of_service < 10) {
+                flags.push('<span class="flag flag-red" title="Under 10 years of service">&#128308; Under 10 Years</span>');
+            }
+
+            // Check 6-month advance notice
+            const startDate = new Date(app.requested_start_date);
+            const submittedDate = new Date(app.submitted_at);
+            const monthsNotice = Math.round((startDate - submittedDate) / (1000 * 60 * 60 * 24 * 30));
+            if (monthsNotice < 6) {
+                flags.push('<span class="flag flag-yellow" title="Less than 6 months advance notice">&#128992; ' + monthsNotice + ' Mo. Notice</span>');
+            }
+
+            // Check manager discussion
+            if (app.manager_discussed === false) {
+                flags.push('<span class="flag flag-yellow" title="Has not discussed with manager">&#128992; No Manager Discussion</span>');
+            }
+
+            // Green flag if fully eligible and no issues
+            if (flags.length === 0 && app.years_of_service >= 10) {
+                flags.push('<span class="flag flag-green" title="Fully eligible">&#128994; Eligible</span>');
+            }
+
+            const flagsHtml = flags.length > 0 ? `<div class="flags-container">${flags.join(' ')}</div>` : '';
+
+            // Leave option info
+            const leaveInfo = app.leave_weeks ? `<span style="color: var(--secondary-blue); font-weight: 600;">${app.leave_weeks} weeks @ ${app.salary_percentage || 100}% pay</span>` : '';
+
             return `
                 <div class="application-item">
                     <div class="application-header">
@@ -2135,10 +2196,12 @@
                         </div>
                         <span class="status-badge status-${app.status}">${statusLabels[app.status]}</span>
                     </div>
-                    <div style="margin-bottom: 0.75rem;">
+                    ${flagsHtml}
+                    <div style="margin-bottom: 0.75rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                         <span class="years-badge" style="font-size: 0.8rem; padding: 0.25rem 0.75rem;">
-                            ${app.years_of_service} Years
+                            ${app.years_of_service.toFixed(1)} Years
                         </span>
+                        ${leaveInfo}
                     </div>
                     <div class="application-dates">
                         <div><span>Start:</span> <strong>${formatDate(app.requested_start_date)}</strong></div>

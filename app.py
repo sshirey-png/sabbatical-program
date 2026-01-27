@@ -800,10 +800,10 @@ def check_site_conflicts():
 
     try:
         query = f"""
-            SELECT employee_name, requested_start_date, requested_end_date
+            SELECT employee_name, requested_start_date, requested_end_date, status
             FROM `{PROJECT_ID}.{DATASET_ID}.applications`
             WHERE site = @site
-              AND status IN ('approved', 'pending_hr')
+              AND status IN ('approved', 'pending_director', 'pending_talent', 'pending_ceo')
               AND application_id != @exclude_id
               AND (
                   (requested_start_date <= @end_date AND requested_end_date >= @start_date)
