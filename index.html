@@ -127,6 +127,83 @@
             height: 16px;
         }
 
+        /* Demo Mode */
+        .demo-mode-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            margin-right: 0.5rem;
+        }
+
+        .demo-label {
+            color: #fdba74;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .demo-toggle {
+            position: relative;
+            width: 36px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .demo-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .demo-toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .demo-toggle-slider:before {
+            content: '';
+            position: absolute;
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        .demo-toggle input:checked + .demo-toggle-slider {
+            background: var(--accent-orange);
+        }
+
+        .demo-toggle input:checked + .demo-toggle-slider:before {
+            transform: translateX(16px);
+        }
+
+        .demo-role-select {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .demo-role-select option {
+            background: var(--primary-navy);
+            color: white;
+        }
+
         /* Navigation Tabs */
         .nav-tabs {
             display: flex;
@@ -793,6 +870,20 @@
             </div>
         </div>
         <div class="header-actions">
+            <!-- Demo Mode Toggle (Admin only) -->
+            <div id="demoModeContainer" class="demo-mode-container hidden">
+                <label class="demo-toggle">
+                    <input type="checkbox" id="demoModeToggle" onchange="toggleDemoMode()">
+                    <span class="demo-toggle-slider"></span>
+                </label>
+                <span class="demo-label">Demo</span>
+                <select id="demoRoleSelect" class="demo-role-select hidden" onchange="changeDemoRole()">
+                    <option value="staff">Staff Only</option>
+                    <option value="talent">Talent Reviewer</option>
+                    <option value="hr">HR Approver</option>
+                    <option value="director">Director</option>
+                </select>
+            </div>
             <div class="user-info" id="userInfo">
                 <div class="user-name" id="userName">Loading...</div>
                 <div class="user-roles" id="userRoles"></div>
@@ -989,9 +1080,11 @@
     <script>
         // Global state
         let currentUser = null;
+        let actualRoles = [];  // Store actual roles for demo mode
         let currentView = 'staff';
         let selectedApplication = null;
         let employeeData = null;
+        let demoMode = false;
 
         // Initialize app
         async function init() {
@@ -1002,23 +1095,18 @@
                     return;
                 }
                 currentUser = await response.json();
+                actualRoles = [...currentUser.roles];  // Store actual roles
 
                 document.getElementById('userName').textContent = currentUser.name;
                 document.getElementById('userRoles').textContent = currentUser.roles.join(', ');
 
-                // Show relevant tabs based on roles
-                if (currentUser.roles.includes('talent') || currentUser.roles.includes('admin')) {
-                    document.querySelector('[data-view="talent"]').classList.remove('hidden');
-                }
-                if (currentUser.roles.includes('hr') || currentUser.roles.includes('admin')) {
-                    document.querySelector('[data-view="hr"]').classList.remove('hidden');
-                }
-                if (currentUser.roles.includes('director')) {
-                    document.querySelector('[data-view="director"]').classList.remove('hidden');
-                }
+                // Show demo mode toggle for admins
                 if (currentUser.roles.includes('admin')) {
-                    document.querySelector('[data-view="all"]').classList.remove('hidden');
+                    document.getElementById('demoModeContainer').classList.remove('hidden');
                 }
+
+                // Show relevant tabs based on roles
+                updateTabsForRoles();
 
                 // Load initial data
                 await loadEligibility();
@@ -1028,6 +1116,75 @@
             } catch (error) {
                 console.error('Init error:', error);
             }
+        }
+
+        // Update tabs based on current roles
+        function updateTabsForRoles() {
+            const roles = currentUser.roles;
+
+            // Hide all special tabs first
+            document.querySelector('[data-view="talent"]').classList.add('hidden');
+            document.querySelector('[data-view="hr"]').classList.add('hidden');
+            document.querySelector('[data-view="director"]').classList.add('hidden');
+            document.querySelector('[data-view="all"]').classList.add('hidden');
+
+            // Show based on roles
+            if (roles.includes('talent') || roles.includes('admin')) {
+                document.querySelector('[data-view="talent"]').classList.remove('hidden');
+            }
+            if (roles.includes('hr') || roles.includes('admin')) {
+                document.querySelector('[data-view="hr"]').classList.remove('hidden');
+            }
+            if (roles.includes('director')) {
+                document.querySelector('[data-view="director"]').classList.remove('hidden');
+            }
+            if (roles.includes('admin')) {
+                document.querySelector('[data-view="all"]').classList.remove('hidden');
+            }
+
+            // Update displayed roles
+            document.getElementById('userRoles').textContent =
+                demoMode ? `Demo: ${roles.join(', ')}` : roles.join(', ');
+        }
+
+        // Demo mode functions
+        function toggleDemoMode() {
+            demoMode = document.getElementById('demoModeToggle').checked;
+            const roleSelect = document.getElementById('demoRoleSelect');
+
+            if (demoMode) {
+                roleSelect.classList.remove('hidden');
+                changeDemoRole();  // Apply selected demo role
+            } else {
+                roleSelect.classList.add('hidden');
+                // Restore actual roles
+                currentUser.roles = [...actualRoles];
+                updateTabsForRoles();
+                switchView('staff');
+            }
+        }
+
+        function changeDemoRole() {
+            const selectedRole = document.getElementById('demoRoleSelect').value;
+
+            // Set roles based on demo selection
+            switch (selectedRole) {
+                case 'staff':
+                    currentUser.roles = ['staff'];
+                    break;
+                case 'talent':
+                    currentUser.roles = ['staff', 'talent'];
+                    break;
+                case 'hr':
+                    currentUser.roles = ['staff', 'hr'];
+                    break;
+                case 'director':
+                    currentUser.roles = ['staff', 'director'];
+                    break;
+            }
+
+            updateTabsForRoles();
+            switchView('staff');  // Reset to staff view
         }
 
         // View switching
