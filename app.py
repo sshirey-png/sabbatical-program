@@ -256,7 +256,7 @@ def employee_lookup():
                 CONCAT(First_Name, ' ', Last_Name) as full_name,
                 Email_Address,
                 Last_Hire_Date,
-                DATE_DIFF(CURRENT_DATE(), Last_Hire_Date, DAY) / 365.25 as years_of_service,
+                DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), DAY) / 365.25 as years_of_service,
                 Job_Title,
                 Function as department,
                 Location_Name as site,
@@ -308,7 +308,7 @@ def eligibility_check():
             SELECT
                 CONCAT(First_Name, ' ', Last_Name) as full_name,
                 Last_Hire_Date,
-                DATE_DIFF(CURRENT_DATE(), Last_Hire_Date, DAY) / 365.25 as years_of_service
+                DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), DAY) / 365.25 as years_of_service
             FROM `{PROJECT_ID}.{STAFF_DATASET}.staff_master_list_with_function`
             WHERE LOWER(Email_Address) = LOWER(@email)
             LIMIT 1
@@ -807,8 +807,8 @@ def get_employee_data(email):
             SELECT
                 Employee_Number as name_key,
                 CONCAT(First_Name, ' ', Last_Name) as full_name,
-                Last_Hire_Date as hire_date,
-                DATE_DIFF(CURRENT_DATE(), Last_Hire_Date, DAY) / 365.25 as years_of_service,
+                DATE(Last_Hire_Date) as hire_date,
+                DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), DAY) / 365.25 as years_of_service,
                 Job_Title as job_title,
                 Function as department,
                 Location_Name as site
