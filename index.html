@@ -853,6 +853,44 @@
             }
         }
 
+        /* Email Template Items */
+        .email-template-item {
+            background: var(--white);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .email-template-item:hover {
+            border-color: var(--secondary-blue);
+            box-shadow: 0 4px 15px rgba(9,74,173,0.1);
+            transform: translateX(5px);
+        }
+
+        /* Email Preview Modal */
+        .email-preview {
+            background: var(--gray-light);
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .email-header-field {
+            margin-bottom: 0.5rem;
+        }
+
+        .email-header-field strong {
+            color: var(--primary-navy);
+        }
+
         /* Hidden */
         .hidden {
             display: none !important;
@@ -908,6 +946,7 @@
         </button>
         <button class="nav-tab hidden" data-view="director" onclick="switchView('director')">Team Status</button>
         <button class="nav-tab hidden" data-view="all" onclick="switchView('all')">All Applications</button>
+        <button class="nav-tab hidden" data-view="emails" onclick="switchView('emails')">Email Templates</button>
     </nav>
 
     <!-- Main Content -->
@@ -988,6 +1027,126 @@
                 </div>
                 <div id="allApplicationsList" class="application-list">
                     <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Templates View -->
+        <div id="emailsView" class="view hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Email Notification Templates</h3>
+                </div>
+                <p style="color: var(--gray); margin-bottom: 1.5rem;">
+                    These are the automated emails sent at each stage of the sabbatical approval process.
+                    Click any template to preview the full email.
+                </p>
+
+                <div class="email-workflow">
+                    <h4 style="color: var(--primary-navy); margin-bottom: 1rem;">Workflow Overview</h4>
+                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem;">
+                        <span style="background: var(--gray-light); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem;">
+                            1. Employee Submits
+                        </span>
+                        <span style="color: var(--gray);">→</span>
+                        <span style="background: var(--warning-light); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem;">
+                            2. Talent Reviews
+                        </span>
+                        <span style="color: var(--gray);">→</span>
+                        <span style="background: #DBEAFE; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem;">
+                            3. HR Reviews
+                        </span>
+                        <span style="color: var(--gray);">→</span>
+                        <span style="background: var(--success-light); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem;">
+                            4. Approved!
+                        </span>
+                    </div>
+                </div>
+
+                <div id="emailTemplatesList" class="application-list">
+                    <div class="email-template-item" onclick="previewEmail('submitted_to_talent')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">New Application → Talent Team</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Notifies Talent team when an employee submits an application
+                                </p>
+                            </div>
+                            <span class="status-badge status-pending_talent">On Submit</span>
+                        </div>
+                    </div>
+
+                    <div class="email-template-item" onclick="previewEmail('submitted_confirmation')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">Submission Confirmation → Employee</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Confirms receipt of application to the employee
+                                </p>
+                            </div>
+                            <span class="status-badge status-pending_talent">On Submit</span>
+                        </div>
+                    </div>
+
+                    <div class="email-template-item" onclick="previewEmail('talent_approved')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">Talent Approved → Employee</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Notifies employee their application passed Talent review
+                                </p>
+                            </div>
+                            <span class="status-badge status-pending_hr">Talent Approves</span>
+                        </div>
+                    </div>
+
+                    <div class="email-template-item" onclick="previewEmail('talent_approved_to_hr')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">Ready for HR → HR Team</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Notifies HR team that application is ready for final review
+                                </p>
+                            </div>
+                            <span class="status-badge status-pending_hr">Talent Approves</span>
+                        </div>
+                    </div>
+
+                    <div class="email-template-item" onclick="previewEmail('talent_denied')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">Talent Denied → Employee</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Notifies employee if application is denied at Talent stage
+                                </p>
+                            </div>
+                            <span class="status-badge status-denied">Talent Denies</span>
+                        </div>
+                    </div>
+
+                    <div class="email-template-item" onclick="previewEmail('hr_approved')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">CONGRATULATIONS! → Employee</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Celebratory email when sabbatical is fully approved
+                                </p>
+                            </div>
+                            <span class="status-badge status-approved">HR Approves</span>
+                        </div>
+                    </div>
+
+                    <div class="email-template-item" onclick="previewEmail('hr_denied')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: var(--primary-navy);">HR Denied → Employee</strong>
+                                <p style="color: var(--gray); font-size: 0.85rem; margin-top: 0.25rem;">
+                                    Notifies employee if application is denied at HR stage
+                                </p>
+                            </div>
+                            <span class="status-badge status-denied">HR Denies</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1074,6 +1233,29 @@
         </div>
     </div>
 
+    <!-- Email Preview Modal -->
+    <div id="emailModal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>Email Preview</h2>
+                <button class="modal-close" onclick="closeEmailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="email-header-field">
+                    <strong>To:</strong> <span id="emailTo"></span>
+                </div>
+                <div class="email-header-field">
+                    <strong>Subject:</strong> <span id="emailSubject"></span>
+                </div>
+                <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border);">
+                <div id="emailBody" class="email-preview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEmailModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Confetti Container -->
     <div id="confettiContainer" class="confetti-container"></div>
 
@@ -1127,6 +1309,7 @@
             document.querySelector('[data-view="hr"]').classList.add('hidden');
             document.querySelector('[data-view="director"]').classList.add('hidden');
             document.querySelector('[data-view="all"]').classList.add('hidden');
+            document.querySelector('[data-view="emails"]').classList.add('hidden');
 
             // Show based on roles
             if (roles.includes('talent') || roles.includes('admin')) {
@@ -1140,6 +1323,7 @@
             }
             if (roles.includes('admin')) {
                 document.querySelector('[data-view="all"]').classList.remove('hidden');
+                document.querySelector('[data-view="emails"]').classList.remove('hidden');
             }
 
             // Update displayed roles
@@ -1901,6 +2085,30 @@
 
         function logout() {
             window.location.href = '/auth/logout';
+        }
+
+        // Email preview functions
+        async function previewEmail(templateType) {
+            try {
+                const response = await fetch(`/api/email-preview/${templateType}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load email template');
+                }
+                const data = await response.json();
+
+                document.getElementById('emailTo').textContent = data.to;
+                document.getElementById('emailSubject').textContent = data.subject;
+                document.getElementById('emailBody').textContent = data.body.trim();
+
+                document.getElementById('emailModal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Preview email error:', error);
+                alert('Failed to load email preview');
+            }
+        }
+
+        function closeEmailModal() {
+            document.getElementById('emailModal').classList.add('hidden');
         }
 
         // Initialize

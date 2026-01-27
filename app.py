@@ -880,6 +880,337 @@ def log_history(application_id, action, actor_email, actor_name, notes=''):
         logger.error(f"Log history error: {e}")
 
 
+# ============================================
+# Email Notification System
+# ============================================
+
+# Email addresses for notifications
+TALENT_TEAM_EMAIL = 'talent@firstlineschools.org'
+HR_TEAM_EMAIL = 'hr@firstlineschools.org'
+
+def get_email_template(template_type, app_data):
+    """Generate email content based on template type and application data"""
+
+    templates = {
+        'submitted_to_talent': {
+            'to': TALENT_TEAM_EMAIL,
+            'subject': f"New Sabbatical Application - {app_data.get('employee_name', 'Employee')}",
+            'body': f"""
+Hello Talent Team,
+
+A new sabbatical application has been submitted and requires your review.
+
+APPLICANT DETAILS
+-----------------
+Name: {app_data.get('employee_name', 'N/A')}
+Email: {app_data.get('employee_email', 'N/A')}
+Job Title: {app_data.get('job_title', 'N/A')}
+Department: {app_data.get('department', 'N/A')}
+Site: {app_data.get('site', 'N/A')}
+Years of Service: {app_data.get('years_of_service', 'N/A')} years
+
+REQUESTED DATES
+---------------
+Start Date: {app_data.get('requested_start_date', 'N/A')}
+End Date: {app_data.get('requested_end_date', 'N/A')}
+Duration: {app_data.get('duration_weeks', 'N/A')} weeks
+
+SABBATICAL PURPOSE
+------------------
+{app_data.get('sabbatical_purpose', 'No description provided.')}
+
+Please log in to the Sabbatical Program portal to review this application:
+https://sabbatical-program-965913991496.us-central1.run.app
+
+Thank you,
+FirstLine Schools Sabbatical Program
+"""
+        },
+
+        'submitted_confirmation': {
+            'to': app_data.get('employee_email', ''),
+            'subject': "Your Sabbatical Application Has Been Submitted",
+            'body': f"""
+Dear {app_data.get('employee_name', 'Team Member')},
+
+Thank you for submitting your sabbatical application! We're excited that you're taking advantage of this benefit after {app_data.get('years_of_service', 'many')} years of dedicated service to FirstLine Schools.
+
+APPLICATION SUMMARY
+-------------------
+Requested Dates: {app_data.get('requested_start_date', 'N/A')} to {app_data.get('requested_end_date', 'N/A')}
+Duration: {app_data.get('duration_weeks', 'N/A')} weeks
+
+WHAT HAPPENS NEXT
+-----------------
+1. The Talent team will review your application
+2. If approved, it will move to HR for final approval
+3. You'll receive email updates at each stage
+
+You can track your application status at:
+https://sabbatical-program-965913991496.us-central1.run.app
+
+If you have questions, please contact the Talent team.
+
+Congratulations on reaching this milestone!
+
+Best regards,
+FirstLine Schools Sabbatical Program
+"""
+        },
+
+        'talent_approved': {
+            'to': app_data.get('employee_email', ''),
+            'subject': "Sabbatical Application Update - Talent Review Complete",
+            'body': f"""
+Dear {app_data.get('employee_name', 'Team Member')},
+
+Great news! Your sabbatical application has been reviewed and APPROVED by the Talent team.
+
+APPLICATION STATUS: Approved by Talent - Pending HR Review
+----------------------------------------------------------
+Requested Dates: {app_data.get('requested_start_date', 'N/A')} to {app_data.get('requested_end_date', 'N/A')}
+
+Reviewer Notes: {app_data.get('talent_notes', 'No additional notes.')}
+
+NEXT STEPS
+----------
+Your application has been forwarded to HR for final approval. You will receive another notification once HR completes their review.
+
+Track your application at:
+https://sabbatical-program-965913991496.us-central1.run.app
+
+Best regards,
+FirstLine Schools Sabbatical Program
+"""
+        },
+
+        'talent_approved_to_hr': {
+            'to': HR_TEAM_EMAIL,
+            'subject': f"Sabbatical Application Ready for HR Review - {app_data.get('employee_name', 'Employee')}",
+            'body': f"""
+Hello HR Team,
+
+A sabbatical application has been approved by Talent and is ready for your final review.
+
+APPLICANT DETAILS
+-----------------
+Name: {app_data.get('employee_name', 'N/A')}
+Email: {app_data.get('employee_email', 'N/A')}
+Job Title: {app_data.get('job_title', 'N/A')}
+Department: {app_data.get('department', 'N/A')}
+Site: {app_data.get('site', 'N/A')}
+Years of Service: {app_data.get('years_of_service', 'N/A')} years
+
+REQUESTED DATES
+---------------
+Start Date: {app_data.get('requested_start_date', 'N/A')}
+End Date: {app_data.get('requested_end_date', 'N/A')}
+Duration: {app_data.get('duration_weeks', 'N/A')} weeks
+
+TALENT REVIEW
+-------------
+Reviewed by: {app_data.get('talent_reviewer', 'N/A')}
+Decision: APPROVED
+Notes: {app_data.get('talent_notes', 'No notes.')}
+
+Please log in to complete the final review:
+https://sabbatical-program-965913991496.us-central1.run.app
+
+Thank you,
+FirstLine Schools Sabbatical Program
+"""
+        },
+
+        'talent_denied': {
+            'to': app_data.get('employee_email', ''),
+            'subject': "Sabbatical Application Update - Review Decision",
+            'body': f"""
+Dear {app_data.get('employee_name', 'Team Member')},
+
+Thank you for your interest in the sabbatical program. After careful review, we regret to inform you that your application has not been approved at this time.
+
+APPLICATION STATUS: Not Approved
+--------------------------------
+Requested Dates: {app_data.get('requested_start_date', 'N/A')} to {app_data.get('requested_end_date', 'N/A')}
+
+Reviewer Feedback: {app_data.get('talent_notes', 'Please contact the Talent team for more information.')}
+
+NEXT STEPS
+----------
+If you have questions about this decision or would like to discuss alternative dates, please reach out to the Talent team at talent@firstlineschools.org.
+
+You may submit a new application with different dates if appropriate.
+
+Best regards,
+FirstLine Schools Sabbatical Program
+"""
+        },
+
+        'hr_approved': {
+            'to': app_data.get('employee_email', ''),
+            'subject': "CONGRATULATIONS! Your Sabbatical Has Been Approved!",
+            'body': f"""
+Dear {app_data.get('employee_name', 'Team Member')},
+
+CONGRATULATIONS! Your sabbatical application has been FULLY APPROVED!
+
+After {app_data.get('years_of_service', 'many')} years of dedicated service to FirstLine Schools, you have earned this well-deserved break. We celebrate your commitment and look forward to your return.
+
+APPROVED SABBATICAL DETAILS
+---------------------------
+Start Date: {app_data.get('requested_start_date', 'N/A')}
+End Date: {app_data.get('requested_end_date', 'N/A')}
+Duration: {app_data.get('duration_weeks', 'N/A')} weeks
+
+HR Notes: {app_data.get('hr_notes', 'Congratulations on this milestone!')}
+
+NEXT STEPS
+----------
+1. HR will contact you to discuss logistics and coverage planning
+2. Work with your supervisor to prepare for your absence
+3. Enjoy your well-earned sabbatical!
+
+Thank you for your years of service to FirstLine Schools and our students.
+
+Best regards,
+FirstLine Schools Sabbatical Program
+
+P.S. We'd love to hear about your sabbatical plans and experiences when you return!
+"""
+        },
+
+        'hr_denied': {
+            'to': app_data.get('employee_email', ''),
+            'subject': "Sabbatical Application Update - HR Review Decision",
+            'body': f"""
+Dear {app_data.get('employee_name', 'Team Member')},
+
+Thank you for your sabbatical application. After review by both the Talent team and HR, we regret to inform you that we are unable to approve your request at this time.
+
+APPLICATION STATUS: Not Approved
+--------------------------------
+Requested Dates: {app_data.get('requested_start_date', 'N/A')} to {app_data.get('requested_end_date', 'N/A')}
+
+HR Feedback: {app_data.get('hr_notes', 'Please contact HR for more information.')}
+
+NEXT STEPS
+----------
+If you have questions about this decision or would like to discuss alternatives, please reach out to HR at hr@firstlineschools.org.
+
+We value your service to FirstLine Schools and encourage you to apply again when circumstances permit.
+
+Best regards,
+FirstLine Schools Sabbatical Program
+"""
+        }
+    }
+
+    return templates.get(template_type, None)
+
+
+def send_notification(template_type, app_data):
+    """Send email notification and log to BigQuery"""
+    template = get_email_template(template_type, app_data)
+    if not template:
+        logger.error(f"Unknown email template: {template_type}")
+        return False
+
+    try:
+        # Log to BigQuery notifications_log
+        notification_id = str(uuid.uuid4())
+        now = datetime.utcnow()
+
+        query = f"""
+            INSERT INTO `{PROJECT_ID}.{DATASET_ID}.notifications_log`
+            (notification_id, application_id, template_type, recipient_email, subject, sent_at)
+            VALUES
+            (@notif_id, @app_id, @template, @recipient, @subject, @now)
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("notif_id", "STRING", notification_id),
+                bigquery.ScalarQueryParameter("app_id", "STRING", app_data.get('application_id', '')),
+                bigquery.ScalarQueryParameter("template", "STRING", template_type),
+                bigquery.ScalarQueryParameter("recipient", "STRING", template['to']),
+                bigquery.ScalarQueryParameter("subject", "STRING", template['subject']),
+                bigquery.ScalarQueryParameter("now", "TIMESTAMP", now),
+            ]
+        )
+        client.query(query, job_config=job_config).result()
+
+        # TODO: Integrate with actual email service (SendGrid, Mailgun, etc.)
+        # For now, just log the email
+        logger.info(f"Email notification logged: {template_type} to {template['to']}")
+        logger.info(f"Subject: {template['subject']}")
+
+        return True
+    except Exception as e:
+        logger.error(f"Send notification error: {e}")
+        return False
+
+
+@app.route('/api/email-preview/<template_type>')
+@login_required
+def preview_email(template_type):
+    """Preview email templates (for demo/testing)"""
+    roles = get_user_role(session.get('user', {}).get('email', ''))
+
+    if 'admin' not in roles:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    # Sample data for preview
+    sample_data = {
+        'application_id': 'preview-123',
+        'employee_name': 'Maria Rodriguez',
+        'employee_email': 'mrodriguez@firstlineschools.org',
+        'job_title': 'Lead Teacher',
+        'department': 'Academics',
+        'site': 'Samuel J. Green Charter School',
+        'years_of_service': '15.3',
+        'requested_start_date': 'June 1, 2026',
+        'requested_end_date': 'August 15, 2026',
+        'duration_weeks': '11',
+        'sabbatical_purpose': 'I plan to travel to Spain to immerse myself in the language and culture, which will enhance my Spanish instruction when I return. I also want to spend quality time with my aging parents.',
+        'talent_reviewer': 'sshirey@firstlineschools.org',
+        'talent_notes': 'Excellent application. Strong candidate with great plans.',
+        'hr_notes': 'Coverage plan approved. Have a wonderful sabbatical!'
+    }
+
+    template = get_email_template(template_type, sample_data)
+
+    if not template:
+        return jsonify({'error': f'Unknown template: {template_type}'}), 404
+
+    return jsonify({
+        'template_type': template_type,
+        'to': template['to'],
+        'subject': template['subject'],
+        'body': template['body']
+    })
+
+
+@app.route('/api/email-templates')
+@login_required
+def list_email_templates():
+    """List all available email templates"""
+    roles = get_user_role(session.get('user', {}).get('email', ''))
+
+    if 'admin' not in roles:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    templates = [
+        {'id': 'submitted_to_talent', 'name': 'New Application → Talent Team', 'description': 'Sent to Talent when employee submits application'},
+        {'id': 'submitted_confirmation', 'name': 'Submission Confirmation → Employee', 'description': 'Confirmation sent to employee after submitting'},
+        {'id': 'talent_approved', 'name': 'Talent Approved → Employee', 'description': 'Sent to employee when Talent approves'},
+        {'id': 'talent_approved_to_hr', 'name': 'Ready for HR → HR Team', 'description': 'Sent to HR when Talent approves'},
+        {'id': 'talent_denied', 'name': 'Talent Denied → Employee', 'description': 'Sent to employee when Talent denies'},
+        {'id': 'hr_approved', 'name': 'HR Approved (Final) → Employee', 'description': 'Congratulations email when fully approved'},
+        {'id': 'hr_denied', 'name': 'HR Denied → Employee', 'description': 'Sent to employee when HR denies'}
+    ]
+
+    return jsonify({'templates': templates})
+
+
 @app.route('/api/application-history/<application_id>')
 @login_required
 def get_application_history(application_id):
