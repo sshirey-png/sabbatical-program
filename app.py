@@ -807,6 +807,703 @@ def get_calendar_data():
     })
 
 
+# ============ My Sabbatical Routes ============
+
+def ensure_my_sabbatical_tables():
+    """Create My Sabbatical tables if they don't exist."""
+    try:
+        # Checklist items table
+        checklist_table = f"{PROJECT_ID}.{DATASET_ID}.checklist_items"
+        try:
+            bq_client.get_table(checklist_table)
+        except:
+            schema = [
+                bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("application_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("task_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("employee_done", "BOOL"),
+                bigquery.SchemaField("employee_done_at", "TIMESTAMP"),
+                bigquery.SchemaField("employee_done_by", "STRING"),
+                bigquery.SchemaField("manager_done", "BOOL"),
+                bigquery.SchemaField("manager_done_at", "TIMESTAMP"),
+                bigquery.SchemaField("manager_done_by", "STRING"),
+                bigquery.SchemaField("hr_done", "BOOL"),
+                bigquery.SchemaField("hr_done_at", "TIMESTAMP"),
+                bigquery.SchemaField("hr_done_by", "STRING"),
+                bigquery.SchemaField("notes_json", "STRING"),  # JSON array of notes
+            ]
+            table = bigquery.Table(checklist_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {checklist_table}")
+
+        # Coverage assignments table
+        coverage_table = f"{PROJECT_ID}.{DATASET_ID}.coverage_assignments"
+        try:
+            bq_client.get_table(coverage_table)
+        except:
+            schema = [
+                bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("application_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("responsibility", "STRING"),
+                bigquery.SchemaField("covered_by", "STRING"),
+                bigquery.SchemaField("email", "STRING"),
+                bigquery.SchemaField("status", "STRING"),
+                bigquery.SchemaField("notes", "STRING"),
+                bigquery.SchemaField("created_at", "TIMESTAMP"),
+                bigquery.SchemaField("updated_at", "TIMESTAMP"),
+            ]
+            table = bigquery.Table(coverage_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {coverage_table}")
+
+        # Messages table
+        messages_table = f"{PROJECT_ID}.{DATASET_ID}.messages"
+        try:
+            bq_client.get_table(messages_table)
+        except:
+            schema = [
+                bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("application_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("from_email", "STRING"),
+                bigquery.SchemaField("from_name", "STRING"),
+                bigquery.SchemaField("to_recipient", "STRING"),
+                bigquery.SchemaField("message", "STRING"),
+                bigquery.SchemaField("sent_at", "TIMESTAMP"),
+                bigquery.SchemaField("read", "BOOL"),
+            ]
+            table = bigquery.Table(messages_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {messages_table}")
+
+        # Activity history table
+        history_table = f"{PROJECT_ID}.{DATASET_ID}.activity_history"
+        try:
+            bq_client.get_table(history_table)
+        except:
+            schema = [
+                bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("application_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("timestamp", "TIMESTAMP"),
+                bigquery.SchemaField("user_email", "STRING"),
+                bigquery.SchemaField("user_name", "STRING"),
+                bigquery.SchemaField("action", "STRING"),
+                bigquery.SchemaField("description", "STRING"),
+            ]
+            table = bigquery.Table(history_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {history_table}")
+
+        # Date change requests table
+        date_changes_table = f"{PROJECT_ID}.{DATASET_ID}.date_change_requests"
+        try:
+            bq_client.get_table(date_changes_table)
+        except:
+            schema = [
+                bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("application_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("requested_by", "STRING"),
+                bigquery.SchemaField("requested_at", "TIMESTAMP"),
+                bigquery.SchemaField("old_start_date", "DATE"),
+                bigquery.SchemaField("old_end_date", "DATE"),
+                bigquery.SchemaField("new_start_date", "DATE"),
+                bigquery.SchemaField("new_end_date", "DATE"),
+                bigquery.SchemaField("reason", "STRING"),
+                bigquery.SchemaField("status", "STRING"),
+                bigquery.SchemaField("manager_approved", "BOOL"),
+                bigquery.SchemaField("manager_approved_by", "STRING"),
+                bigquery.SchemaField("manager_approved_at", "TIMESTAMP"),
+                bigquery.SchemaField("talent_approved", "BOOL"),
+                bigquery.SchemaField("talent_approved_by", "STRING"),
+                bigquery.SchemaField("talent_approved_at", "TIMESTAMP"),
+            ]
+            table = bigquery.Table(date_changes_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {date_changes_table}")
+
+        return True
+    except Exception as e:
+        logger.error(f"Error creating My Sabbatical tables: {e}")
+        return False
+
+
+def add_activity(application_id, user_email, user_name, action, description):
+    """Add an activity to the history."""
+    try:
+        history_table = f"{PROJECT_ID}.{DATASET_ID}.activity_history"
+        query = f"""
+        INSERT INTO `{history_table}` (id, application_id, timestamp, user_email, user_name, action, description)
+        VALUES (@id, @application_id, @timestamp, @user_email, @user_name, @action, @description)
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", str(uuid.uuid4())[:8]),
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("timestamp", "TIMESTAMP", datetime.now()),
+                bigquery.ScalarQueryParameter("user_email", "STRING", user_email),
+                bigquery.ScalarQueryParameter("user_name", "STRING", user_name),
+                bigquery.ScalarQueryParameter("action", "STRING", action),
+                bigquery.ScalarQueryParameter("description", "STRING", description),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+    except Exception as e:
+        logger.error(f"Error adding activity: {e}")
+
+
+@app.route('/my-sabbatical')
+def my_sabbatical_page():
+    """Serve the My Sabbatical page."""
+    return send_file(os.path.join(SCRIPT_DIR, 'my-sabbatical.html'))
+
+
+@app.route('/api/my-sabbatical', methods=['GET'])
+def get_my_sabbatical():
+    """Get sabbatical data for the logged-in user."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+    ensure_my_sabbatical_tables()
+
+    # Find approved/planning sabbatical for this user
+    all_applications = read_all_applications()
+    sabbatical = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+                sabbatical = app
+                break
+
+    if not sabbatical:
+        return jsonify({'found': False})
+
+    application_id = sabbatical['application_id']
+
+    # Get checklist items
+    checklist = []
+    try:
+        query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.checklist_items`
+        WHERE application_id = @application_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("application_id", "STRING", application_id)]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+        for row in results:
+            notes = []
+            if row.notes_json:
+                try:
+                    notes = json.loads(row.notes_json)
+                except:
+                    pass
+            checklist.append({
+                'task_id': row.task_id,
+                'employee_done': row.employee_done or False,
+                'manager_done': row.manager_done or False,
+                'hr_done': row.hr_done or False,
+                'notes': notes
+            })
+    except Exception as e:
+        logger.error(f"Error loading checklist: {e}")
+
+    # Get coverage assignments
+    coverage = []
+    try:
+        query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.coverage_assignments`
+        WHERE application_id = @application_id
+        ORDER BY created_at
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("application_id", "STRING", application_id)]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+        for row in results:
+            coverage.append({
+                'id': row.id,
+                'responsibility': row.responsibility,
+                'covered_by': row.covered_by,
+                'email': row.email or '',
+                'status': row.status or 'Pending',
+                'notes': row.notes or ''
+            })
+    except Exception as e:
+        logger.error(f"Error loading coverage: {e}")
+
+    # Get messages
+    messages = []
+    try:
+        query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.messages`
+        WHERE application_id = @application_id
+        ORDER BY sent_at DESC
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("application_id", "STRING", application_id)]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+        for row in results:
+            messages.append({
+                'id': row.id,
+                'from_name': row.from_name,
+                'from_email': row.from_email,
+                'message': row.message,
+                'sent_at': row.sent_at.isoformat() if row.sent_at else '',
+                'unread': not row.read
+            })
+    except Exception as e:
+        logger.error(f"Error loading messages: {e}")
+
+    # Get activity history
+    history = []
+    try:
+        query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.activity_history`
+        WHERE application_id = @application_id
+        ORDER BY timestamp DESC
+        LIMIT 50
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("application_id", "STRING", application_id)]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+        for row in results:
+            history.append({
+                'timestamp': row.timestamp.isoformat() if row.timestamp else '',
+                'description': row.description
+            })
+    except Exception as e:
+        logger.error(f"Error loading history: {e}")
+
+    return jsonify({
+        'found': True,
+        'sabbatical': sabbatical,
+        'checklist': checklist,
+        'coverage': coverage,
+        'messages': messages,
+        'history': history
+    })
+
+
+@app.route('/api/my-sabbatical/checklist/<task_id>', methods=['PATCH'])
+def update_checklist_item(task_id):
+    """Update a checklist item."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+    data = request.json
+    role = data.get('role')
+    checked = data.get('checked', False)
+
+    if role not in ['employee', 'manager', 'hr']:
+        return jsonify({'error': 'Invalid role'}), 400
+
+    # Find user's sabbatical
+    all_applications = read_all_applications()
+    application_id = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+                application_id = app['application_id']
+                break
+
+    # Also allow managers/HR to update for any sabbatical they can access
+    if not application_id:
+        # Check if admin/HR
+        if email in [e.lower() for e in ADMIN_USERS]:
+            # Get application_id from query param
+            application_id = request.args.get('application_id')
+
+    if not application_id:
+        return jsonify({'error': 'No sabbatical found'}), 404
+
+    try:
+        checklist_table = f"{PROJECT_ID}.{DATASET_ID}.checklist_items"
+
+        # Check if item exists
+        query = f"""
+        SELECT id FROM `{checklist_table}`
+        WHERE application_id = @application_id AND task_id = @task_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("task_id", "STRING", task_id),
+            ]
+        )
+        results = list(bq_client.query(query, job_config=job_config).result())
+
+        if results:
+            # Update existing
+            update_query = f"""
+            UPDATE `{checklist_table}`
+            SET {role}_done = @checked,
+                {role}_done_at = @done_at,
+                {role}_done_by = @done_by
+            WHERE application_id = @application_id AND task_id = @task_id
+            """
+        else:
+            # Insert new
+            update_query = f"""
+            INSERT INTO `{checklist_table}` (id, application_id, task_id, {role}_done, {role}_done_at, {role}_done_by)
+            VALUES (@id, @application_id, @task_id, @checked, @done_at, @done_by)
+            """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", str(uuid.uuid4())[:8]),
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("task_id", "STRING", task_id),
+                bigquery.ScalarQueryParameter("checked", "BOOL", checked),
+                bigquery.ScalarQueryParameter("done_at", "TIMESTAMP", datetime.now() if checked else None),
+                bigquery.ScalarQueryParameter("done_by", "STRING", user.get('name', email) if checked else None),
+            ]
+        )
+        bq_client.query(update_query, job_config=job_config).result()
+
+        # Add activity
+        action = 'checked' if checked else 'unchecked'
+        add_activity(application_id, email, user.get('name', ''), action, f"{user.get('name', '')} {action} task: {task_id}")
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error updating checklist: {e}")
+        return jsonify({'error': 'Failed to update'}), 500
+
+
+@app.route('/api/my-sabbatical/checklist/<task_id>/notes', methods=['POST'])
+def add_checklist_note(task_id):
+    """Add a note to a checklist item."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+    data = request.json
+    note_text = data.get('text', '').strip()
+
+    if not note_text:
+        return jsonify({'error': 'Note text required'}), 400
+
+    # Find user's sabbatical
+    all_applications = read_all_applications()
+    application_id = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+                application_id = app['application_id']
+                break
+
+    if not application_id:
+        return jsonify({'error': 'No sabbatical found'}), 404
+
+    try:
+        checklist_table = f"{PROJECT_ID}.{DATASET_ID}.checklist_items"
+
+        # Get existing notes
+        query = f"""
+        SELECT id, notes_json FROM `{checklist_table}`
+        WHERE application_id = @application_id AND task_id = @task_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("task_id", "STRING", task_id),
+            ]
+        )
+        results = list(bq_client.query(query, job_config=job_config).result())
+
+        new_note = {
+            'author': user.get('name', email),
+            'text': note_text,
+            'timestamp': datetime.now().isoformat()
+        }
+
+        if results:
+            # Update existing
+            existing_notes = []
+            if results[0].notes_json:
+                try:
+                    existing_notes = json.loads(results[0].notes_json)
+                except:
+                    pass
+            existing_notes.append(new_note)
+
+            update_query = f"""
+            UPDATE `{checklist_table}`
+            SET notes_json = @notes_json
+            WHERE application_id = @application_id AND task_id = @task_id
+            """
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                    bigquery.ScalarQueryParameter("task_id", "STRING", task_id),
+                    bigquery.ScalarQueryParameter("notes_json", "STRING", json.dumps(existing_notes)),
+                ]
+            )
+        else:
+            # Insert new
+            update_query = f"""
+            INSERT INTO `{checklist_table}` (id, application_id, task_id, notes_json)
+            VALUES (@id, @application_id, @task_id, @notes_json)
+            """
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("id", "STRING", str(uuid.uuid4())[:8]),
+                    bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                    bigquery.ScalarQueryParameter("task_id", "STRING", task_id),
+                    bigquery.ScalarQueryParameter("notes_json", "STRING", json.dumps([new_note])),
+                ]
+            )
+
+        bq_client.query(update_query, job_config=job_config).result()
+
+        # Add activity
+        add_activity(application_id, email, user.get('name', ''), 'note_added', f"{user.get('name', '')} added note to task: {task_id}")
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error adding note: {e}")
+        return jsonify({'error': 'Failed to add note'}), 500
+
+
+@app.route('/api/my-sabbatical/coverage', methods=['POST'])
+def add_coverage():
+    """Add a coverage assignment."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+    data = request.json
+
+    # Find user's sabbatical
+    all_applications = read_all_applications()
+    application_id = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+                application_id = app['application_id']
+                break
+
+    if not application_id:
+        return jsonify({'error': 'No sabbatical found'}), 404
+
+    try:
+        coverage_table = f"{PROJECT_ID}.{DATASET_ID}.coverage_assignments"
+        coverage_id = str(uuid.uuid4())[:8]
+
+        query = f"""
+        INSERT INTO `{coverage_table}` (id, application_id, responsibility, covered_by, email, status, notes, created_at, updated_at)
+        VALUES (@id, @application_id, @responsibility, @covered_by, @email, @status, @notes, @created_at, @updated_at)
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", coverage_id),
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("responsibility", "STRING", data.get('responsibility', '')),
+                bigquery.ScalarQueryParameter("covered_by", "STRING", data.get('covered_by', '')),
+                bigquery.ScalarQueryParameter("email", "STRING", data.get('email', '')),
+                bigquery.ScalarQueryParameter("status", "STRING", 'Pending'),
+                bigquery.ScalarQueryParameter("notes", "STRING", data.get('notes', '')),
+                bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.now()),
+                bigquery.ScalarQueryParameter("updated_at", "TIMESTAMP", datetime.now()),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        # Add activity
+        add_activity(application_id, email, user.get('name', ''), 'coverage_added',
+                    f"{user.get('name', '')} added coverage: {data.get('responsibility')} covered by {data.get('covered_by')}")
+
+        return jsonify({'success': True, 'id': coverage_id})
+    except Exception as e:
+        logger.error(f"Error adding coverage: {e}")
+        return jsonify({'error': 'Failed to add coverage'}), 500
+
+
+@app.route('/api/my-sabbatical/messages', methods=['POST'])
+def send_sabbatical_message():
+    """Send a message about a sabbatical."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+    data = request.json
+
+    # Find user's sabbatical
+    all_applications = read_all_applications()
+    application_id = None
+    sabbatical = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+                application_id = app['application_id']
+                sabbatical = app
+                break
+
+    if not application_id:
+        return jsonify({'error': 'No sabbatical found'}), 404
+
+    try:
+        messages_table = f"{PROJECT_ID}.{DATASET_ID}.messages"
+        message_id = str(uuid.uuid4())[:8]
+
+        query = f"""
+        INSERT INTO `{messages_table}` (id, application_id, from_email, from_name, to_recipient, message, sent_at, read)
+        VALUES (@id, @application_id, @from_email, @from_name, @to_recipient, @message, @sent_at, @read)
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", message_id),
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("from_email", "STRING", email),
+                bigquery.ScalarQueryParameter("from_name", "STRING", user.get('name', '')),
+                bigquery.ScalarQueryParameter("to_recipient", "STRING", data.get('recipient', '')),
+                bigquery.ScalarQueryParameter("message", "STRING", data.get('message', '')),
+                bigquery.ScalarQueryParameter("sent_at", "TIMESTAMP", datetime.now()),
+                bigquery.ScalarQueryParameter("read", "BOOL", False),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        # Send email notification to recipient
+        recipient_emails = {
+            'manager': sabbatical.get('manager_email', ''),  # Would need to store this
+            'hr': 'hr@firstlineschools.org',
+            'benefits': 'benefits@firstlineschools.org',
+            'payroll': 'payroll@firstlineschools.org',
+            'talent': 'talent@firstlineschools.org'
+        }
+        to_email = recipient_emails.get(data.get('recipient'), '')
+        if to_email:
+            subject = f"Sabbatical Message from {user.get('name', '')} - {sabbatical.get('employee_name', '')}"
+            html_body = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                <h2>New Sabbatical Message</h2>
+                <p><strong>From:</strong> {user.get('name', '')} ({email})</p>
+                <p><strong>Regarding:</strong> {sabbatical.get('employee_name', '')}'s Sabbatical</p>
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                    {data.get('message', '')}
+                </div>
+                <p><a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical">View in Sabbatical Portal</a></p>
+            </div>
+            """
+            send_email(to_email, subject, html_body)
+
+        # Add activity
+        add_activity(application_id, email, user.get('name', ''), 'message_sent',
+                    f"{user.get('name', '')} sent message to {data.get('recipient')}")
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error sending message: {e}")
+        return jsonify({'error': 'Failed to send message'}), 500
+
+
+@app.route('/api/my-sabbatical/date-change', methods=['POST'])
+def request_date_change():
+    """Request a date change for sabbatical."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+    data = request.json
+
+    # Find user's sabbatical
+    all_applications = read_all_applications()
+    application_id = None
+    sabbatical = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') in ['Approved', 'Planning', 'Confirmed']:
+                application_id = app['application_id']
+                sabbatical = app
+                break
+
+    if not application_id:
+        return jsonify({'error': 'No sabbatical found'}), 404
+
+    try:
+        date_changes_table = f"{PROJECT_ID}.{DATASET_ID}.date_change_requests"
+        request_id = str(uuid.uuid4())[:8]
+
+        # Parse dates
+        old_start = datetime.strptime(sabbatical['start_date'], '%Y-%m-%d').date() if sabbatical.get('start_date') else None
+        old_end = datetime.strptime(sabbatical['end_date'], '%Y-%m-%d').date() if sabbatical.get('end_date') else None
+        new_start = datetime.strptime(data['new_start_date'], '%Y-%m-%d').date() if data.get('new_start_date') else None
+        new_end = datetime.strptime(data['new_end_date'], '%Y-%m-%d').date() if data.get('new_end_date') else None
+
+        query = f"""
+        INSERT INTO `{date_changes_table}` (
+            id, application_id, requested_by, requested_at,
+            old_start_date, old_end_date, new_start_date, new_end_date,
+            reason, status
+        ) VALUES (
+            @id, @application_id, @requested_by, @requested_at,
+            @old_start_date, @old_end_date, @new_start_date, @new_end_date,
+            @reason, @status
+        )
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", request_id),
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("requested_by", "STRING", email),
+                bigquery.ScalarQueryParameter("requested_at", "TIMESTAMP", datetime.now()),
+                bigquery.ScalarQueryParameter("old_start_date", "DATE", old_start),
+                bigquery.ScalarQueryParameter("old_end_date", "DATE", old_end),
+                bigquery.ScalarQueryParameter("new_start_date", "DATE", new_start),
+                bigquery.ScalarQueryParameter("new_end_date", "DATE", new_end),
+                bigquery.ScalarQueryParameter("reason", "STRING", data.get('reason', '')),
+                bigquery.ScalarQueryParameter("status", "STRING", 'Pending'),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        # Send notification emails
+        subject = f"Sabbatical Date Change Request - {sabbatical.get('employee_name', '')}"
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+            <h2>Sabbatical Date Change Request</h2>
+            <p><strong>{sabbatical.get('employee_name', '')}</strong> has requested a date change for their sabbatical.</p>
+
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                <tr>
+                    <th style="text-align: left; padding: 8px; background: #f5f5f5;">Current Dates</th>
+                    <td style="padding: 8px;">{sabbatical.get('start_date', 'TBD')} - {sabbatical.get('end_date', 'TBD')}</td>
+                </tr>
+                <tr>
+                    <th style="text-align: left; padding: 8px; background: #f5f5f5;">Requested Dates</th>
+                    <td style="padding: 8px;">{data.get('new_start_date', 'TBD')} - {data.get('new_end_date', 'TBD')}</td>
+                </tr>
+                <tr>
+                    <th style="text-align: left; padding: 8px; background: #f5f5f5;">Reason</th>
+                    <td style="padding: 8px;">{data.get('reason', 'No reason provided')}</td>
+                </tr>
+            </table>
+
+            <p>Please review and approve/deny this request in the Sabbatical Portal.</p>
+        </div>
+        """
+        send_email(TALENT_TEAM_EMAIL, subject, html_body)
+
+        # Add activity
+        add_activity(application_id, email, user.get('name', ''), 'date_change_requested',
+                    f"{user.get('name', '')} requested date change: {data.get('new_start_date')} - {data.get('new_end_date')}")
+
+        return jsonify({'success': True, 'request_id': request_id})
+    except Exception as e:
+        logger.error(f"Error requesting date change: {e}")
+        return jsonify({'error': 'Failed to submit request'}), 500
+
+
 # ============ Auth Routes ============
 
 @app.route('/login')

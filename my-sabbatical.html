@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Sabbatical | FirstLine Schools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Open Sans', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                    colors: {
+                        'fls-orange': '#e47727',
+                        'fls-orange-dark': '#c9621c',
+                        'fls-navy': '#002f60',
+                        'fls-blue': '#094aad',
+                        'fls-light-blue': '#e8f4f8',
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', system-ui, -apple-system, sans-serif; }
+        .status-applied { background-color: #fef3c7; color: #92400e; }
+        .status-approved { background-color: #dbeafe; color: #1e40af; }
+        .status-planning { background-color: #e0e7ff; color: #3730a3; }
+        .status-confirmed { background-color: #dcfce7; color: #166534; }
+        .status-on-sabbatical { background-color: #d1fae5; color: #065f46; }
+        .status-returning { background-color: #fef3c7; color: #92400e; }
+        .status-completed { background-color: #f3f4f6; color: #374151; }
+        .loader {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #e47727;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-active { border-bottom: 3px solid #e47727; color: #002f60; font-weight: 600; }
+        .tab-inactive { border-bottom: 3px solid transparent; color: #6b7280; }
+        .tab-inactive:hover { color: #002f60; }
+        .checklist-phase { cursor: pointer; }
+        .checklist-phase:hover { background-color: #f9fafb; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-fls-navy border-b border-fls-navy">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-4">
+                    <a href="/">
+                        <img src="https://firstlineschools.org/wp-content/uploads/2020/08/FLS-Logo_v2019_Color.png" alt="FirstLine Schools" class="h-10 bg-white rounded px-2 py-1">
+                    </a>
+                    <div>
+                        <h1 class="text-lg font-semibold text-white">My Sabbatical</h1>
+                        <p class="text-xs text-orange-200">Planning & Progress</p>
+                    </div>
+                </div>
+                <div id="authSection" class="flex items-center gap-3">
+                    <div id="userInfo" class="flex items-center gap-3">
+                        <span id="userName" class="text-sm text-white hidden sm:inline"></span>
+                        <a href="/logout" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-fls-blue rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            <span class="hidden sm:inline">Sign Out</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Loading State -->
+        <div id="loadingState" class="flex items-center justify-center py-20">
+            <div class="loader"></div>
+            <span class="ml-3 text-gray-600">Loading your sabbatical...</span>
+        </div>
+
+        <!-- No Sabbatical State -->
+        <div id="noSabbaticalState" class="hidden text-center py-20">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <h2 class="text-xl font-semibold text-gray-700 mb-2">No Active Sabbatical</h2>
+            <p class="text-gray-500 mb-6">You don't have an approved sabbatical yet.</p>
+            <a href="/" class="inline-flex items-center gap-2 bg-fls-orange hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition">
+                Apply for Sabbatical
+            </a>
+        </div>
+
+        <!-- Sabbatical Content -->
+        <div id="sabbaticalContent" class="hidden">
+            <!-- Header Card -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <!-- Employee Info -->
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-fls-navy rounded-full flex items-center justify-center text-white text-2xl font-bold" id="avatarInitials">
+                            SJ
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-fls-navy" id="employeeName">Sarah Johnson</h2>
+                            <p class="text-gray-600" id="employeeDetails">Lead Teacher, Langston Hughes Academy</p>
+                            <p class="text-sm text-gray-500" id="yearsOfService">15 Years of Service</p>
+                        </div>
+                    </div>
+                    <!-- Status Badge -->
+                    <div class="flex items-center gap-4">
+                        <span id="statusBadge" class="px-4 py-2 rounded-full text-sm font-semibold status-planning">
+                            Planning
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Key Dates Row -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Start Date</div>
+                        <div class="text-lg font-bold text-fls-navy mt-1" id="startDate">Jun 1, 2026</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">End Date</div>
+                        <div class="text-lg font-bold text-fls-navy mt-1" id="endDate">Jul 26, 2026</div>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Option</div>
+                        <div class="text-lg font-bold text-fls-navy mt-1" id="sabbaticalOption">8 Weeks</div>
+                        <div class="text-xs text-gray-500" id="salaryPercent">100% Salary</div>
+                    </div>
+                    <div class="bg-fls-light-blue rounded-lg p-4 text-center">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide">Days Until</div>
+                        <div class="text-3xl font-bold text-fls-orange mt-1" id="daysUntil">124</div>
+                        <div class="text-xs text-gray-500" id="daysUntilLabel">to start</div>
+                    </div>
+                </div>
+
+                <!-- Request Date Change Button -->
+                <div class="mt-4 flex justify-end">
+                    <button onclick="openDateChangeModal()" class="text-fls-blue hover:text-fls-navy text-sm font-medium flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Request Date Change
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Timeline -->
+            <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Sabbatical Journey</h3>
+                <div class="relative">
+                    <!-- Progress Bar -->
+                    <div class="hidden md:block absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded">
+                        <div id="progressBar" class="h-1 bg-fls-orange rounded transition-all" style="width: 33%"></div>
+                    </div>
+                    <!-- Steps -->
+                    <div class="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4">
+                        <div class="text-center" data-step="applied">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-green-500 text-white flex items-center justify-center text-sm mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium text-gray-700">Applied</div>
+                            <div class="text-xs text-gray-500 hidden md:block" id="appliedDate">Jan 15</div>
+                        </div>
+                        <div class="text-center" data-step="approved">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-green-500 text-white flex items-center justify-center text-sm mb-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <div class="text-xs font-medium text-gray-700">Approved</div>
+                            <div class="text-xs text-gray-500 hidden md:block" id="approvedDate">Jan 22</div>
+                        </div>
+                        <div class="text-center" data-step="planning">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-fls-orange text-white flex items-center justify-center text-sm mb-2 ring-4 ring-orange-200">
+                                <span class="font-bold">3</span>
+                            </div>
+                            <div class="text-xs font-medium text-fls-navy">Planning</div>
+                            <div class="text-xs text-gray-500 hidden md:block">Current</div>
+                        </div>
+                        <div class="text-center" data-step="confirmed">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm mb-2">
+                                <span class="font-bold">4</span>
+                            </div>
+                            <div class="text-xs font-medium text-gray-500">Confirmed</div>
+                            <div class="text-xs text-gray-400 hidden md:block" id="confirmedDate">-</div>
+                        </div>
+                        <div class="text-center" data-step="on-sabbatical">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm mb-2">
+                                <span class="font-bold">5</span>
+                            </div>
+                            <div class="text-xs font-medium text-gray-500">On Leave</div>
+                            <div class="text-xs text-gray-400 hidden md:block" id="onLeaveDate">Jun 1</div>
+                        </div>
+                        <div class="text-center" data-step="completed">
+                            <div class="w-8 h-8 mx-auto rounded-full bg-gray-300 text-gray-500 flex items-center justify-center text-sm mb-2">
+                                <span class="font-bold">6</span>
+                            </div>
+                            <div class="text-xs font-medium text-gray-500">Complete</div>
+                            <div class="text-xs text-gray-400 hidden md:block" id="completeDate">Jul 26</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="bg-white rounded-t-xl shadow-md border-b">
+                <div class="flex overflow-x-auto">
+                    <button onclick="showTab('checklist')" id="tab-checklist" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-active">
+                        <span class="hidden sm:inline">Planning </span>Checklist
+                    </button>
+                    <button onclick="showTab('coverage')" id="tab-coverage" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
+                        <span class="hidden sm:inline">My </span>Team
+                    </button>
+                    <button onclick="showTab('documents')" id="tab-documents" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
+                        Documents
+                    </button>
+                    <button onclick="showTab('messages')" id="tab-messages" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
+                        Messages
+                        <span id="unreadBadge" class="hidden ml-1 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">3</span>
+                    </button>
+                    <button onclick="showTab('history')" id="tab-history" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
+                        History
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="bg-white rounded-b-xl shadow-md p-6">
+                <!-- Checklist Tab -->
+                <div id="content-checklist">
+                    <!-- Progress Summary -->
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-fls-navy">Planning Checklist</h3>
+                            <p class="text-sm text-gray-500">Track your preparation progress</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-fls-navy"><span id="completedTasks">12</span>/<span id="totalTasks">47</span></div>
+                                <div class="text-xs text-gray-500">Tasks Complete</div>
+                            </div>
+                            <div class="w-32 h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div id="checklistProgress" class="h-full bg-fls-orange rounded-full transition-all" style="width: 26%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <select id="phaseFilter" onchange="filterChecklist()" class="px-3 py-2 border rounded-lg text-sm">
+                            <option value="">All Phases</option>
+                            <option value="6-months">6 Months Before</option>
+                            <option value="5-months">5 Months Before</option>
+                            <option value="4-months">4 Months Before</option>
+                            <option value="3-months">3 Months Before</option>
+                            <option value="2-months">2 Months Before</option>
+                            <option value="1-month">1 Month Before</option>
+                            <option value="1-2-weeks">1-2 Weeks Before</option>
+                            <option value="return-day1">Return - Day 1</option>
+                            <option value="return-week1">Return - Week 1</option>
+                            <option value="return-week2">Return - Week 2</option>
+                        </select>
+                        <label class="flex items-center gap-2 text-sm text-gray-600">
+                            <input type="checkbox" id="incompleteOnly" onchange="filterChecklist()" class="rounded text-fls-orange">
+                            Show incomplete only
+                        </label>
+                    </div>
+
+                    <!-- Checklist Phases -->
+                    <div id="checklistContainer" class="space-y-4">
+                        <!-- Phases will be rendered by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Coverage Tab -->
+                <div id="content-coverage" class="hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-fls-navy">Coverage Plan</h3>
+                            <p class="text-sm text-gray-500">Who's covering what while you're away</p>
+                        </div>
+                        <button onclick="openAddCoverageModal()" class="bg-fls-orange hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Add Responsibility
+                        </button>
+                    </div>
+
+                    <!-- Coverage Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Responsibility</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Covered By</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Notes</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="coverageTable">
+                                <!-- Rows will be rendered by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noCoverage" class="hidden text-center py-8 text-gray-500">
+                        No coverage assignments yet. Add your first responsibility above.
+                    </div>
+
+                    <!-- Coverage Contacts -->
+                    <div class="mt-8 pt-6 border-t">
+                        <h4 class="font-semibold text-fls-navy mb-4">Coverage Contacts</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="coverageContacts">
+                            <!-- Contacts will be rendered by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents Tab -->
+                <div id="content-documents" class="hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-fls-navy">Documents</h3>
+                            <p class="text-sm text-gray-500">Upload and manage sabbatical documents</p>
+                        </div>
+                        <button onclick="openUploadModal()" class="bg-fls-orange hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Upload Document
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Document</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Uploaded By</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="documentsTable">
+                                <!-- Rows will be rendered by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="noDocuments" class="hidden text-center py-8 text-gray-500">
+                        No documents uploaded yet.
+                    </div>
+                </div>
+
+                <!-- Messages Tab -->
+                <div id="content-messages" class="hidden">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-fls-navy">Messages & Updates</h3>
+                            <p class="text-sm text-gray-500">Communication about your sabbatical</p>
+                        </div>
+                    </div>
+
+                    <!-- Messages List -->
+                    <div id="messagesList" class="space-y-4 mb-6 max-h-96 overflow-y-auto">
+                        <!-- Messages will be rendered by JavaScript -->
+                    </div>
+                    <div id="noMessages" class="hidden text-center py-8 text-gray-500">
+                        No messages yet.
+                    </div>
+
+                    <!-- New Message Form -->
+                    <div class="border-t pt-6">
+                        <h4 class="font-semibold text-gray-700 mb-3">Send a Message</h4>
+                        <div class="space-y-3">
+                            <select id="messageRecipient" class="w-full px-4 py-2 border rounded-lg text-sm">
+                                <option value="">Select Recipient...</option>
+                                <option value="manager">My Manager</option>
+                                <option value="hr">HR Team</option>
+                                <option value="benefits">Benefits Team</option>
+                                <option value="payroll">Payroll Team</option>
+                                <option value="talent">Talent Team</option>
+                            </select>
+                            <textarea id="messageText" rows="3" placeholder="Type your message..."
+                                class="w-full px-4 py-2 border rounded-lg text-sm"></textarea>
+                            <div class="flex justify-end">
+                                <button onclick="sendMessage()" class="bg-fls-navy hover:bg-blue-900 text-white px-6 py-2 rounded-lg text-sm font-medium">
+                                    Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="content-history" class="hidden">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-fls-navy">Activity History</h3>
+                        <p class="text-sm text-gray-500">All updates and changes to your sabbatical</p>
+                    </div>
+
+                    <div id="historyList" class="space-y-3">
+                        <!-- History items will be rendered by JavaScript -->
+                    </div>
+                    <div id="noHistory" class="hidden text-center py-8 text-gray-500">
+                        No activity yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Date Change Modal -->
+    <div id="dateChangeModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full">
+            <div class="border-b px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-fls-navy">Request Date Change</h2>
+                <button onclick="closeDateChangeModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Current Dates</label>
+                    <p class="text-gray-600"><span id="currentStartDate">Jun 1, 2026</span> - <span id="currentEndDate">Jul 26, 2026</span></p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">New Start Date</label>
+                        <input type="date" id="newStartDate" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">New End Date</label>
+                        <input type="date" id="newEndDate" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Reason for Change</label>
+                    <textarea id="dateChangeReason" rows="3" placeholder="Please explain why you need to change your dates..."
+                        class="w-full px-4 py-2 border rounded-lg"></textarea>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p class="text-sm text-yellow-800">
+                        <strong>Note:</strong> Date changes require approval from your Manager and Talent. HR, Benefits, and Payroll will be notified of approved changes.
+                    </p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closeDateChangeModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button onclick="submitDateChange()" class="bg-fls-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium">
+                        Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Modal -->
+    <div id="notesModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="border-b px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-fls-navy" id="notesModalTitle">Task Notes</h2>
+                <button onclick="closeNotesModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <div id="existingNotes" class="space-y-3 mb-4">
+                    <!-- Existing notes will be rendered here -->
+                </div>
+                <div class="border-t pt-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Add Note</label>
+                    <textarea id="newNoteText" rows="3" placeholder="Add a note..."
+                        class="w-full px-4 py-2 border rounded-lg"></textarea>
+                </div>
+            </div>
+            <div class="border-t px-6 py-4 flex justify-end gap-3">
+                <button onclick="closeNotesModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                <button onclick="saveNote()" class="bg-fls-navy hover:bg-blue-900 text-white px-6 py-2 rounded-lg font-medium">
+                    Save Note
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Coverage Modal -->
+    <div id="coverageModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full">
+            <div class="border-b px-6 py-4 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-fls-navy">Add Coverage Assignment</h2>
+                <button onclick="closeCoverageModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Responsibility</label>
+                        <input type="text" id="coverageResponsibility" placeholder="e.g., 3rd Grade Math Instruction"
+                            class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Covered By</label>
+                        <input type="text" id="coveragePerson" placeholder="Name of person covering"
+                            class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Their Email</label>
+                        <input type="email" id="coverageEmail" placeholder="email@firstlineschools.org"
+                            class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                        <textarea id="coverageNotes" rows="2" placeholder="Any additional details..."
+                            class="w-full px-4 py-2 border rounded-lg"></textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button onclick="closeCoverageModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button onclick="saveCoverage()" class="bg-fls-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium">
+                        Add Assignment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let sabbaticalData = null;
+        let checklistData = [];
+        let coverageData = [];
+        let messagesData = [];
+        let historyData = [];
+        let currentUser = null;
+        let currentTaskId = null;
+
+        // Checklist template - the 6-month planning guide
+        const checklistTemplate = [
+            {
+                phase: '6-months',
+                title: '6 Months Before - Application & Approval',
+                tasks: [
+                    { id: '6m-1', text: 'Have initial conversation with Manager', roles: ['employee', 'manager'] },
+                    { id: '6m-2', text: 'Submit sabbatical application', roles: ['employee'] },
+                    { id: '6m-3', text: 'Application approved', roles: ['manager'] },
+                    { id: '6m-4', text: 'HR notified of approved sabbatical', roles: ['hr'] },
+                    { id: '6m-5', text: 'Benefits notified', roles: ['hr'] },
+                    { id: '6m-6', text: 'Payroll notified', roles: ['hr'] },
+                ]
+            },
+            {
+                phase: '5-months',
+                title: '5 Months Before - Notifications',
+                tasks: [
+                    { id: '5m-1', text: 'Notify School Leadership Team', roles: ['employee', 'manager'] },
+                    { id: '5m-2', text: 'Notify Network Office (CAO, COO as applicable)', roles: ['employee', 'manager'] },
+                    { id: '5m-3', text: 'Notify cross-functional partners', roles: ['employee', 'manager'] },
+                    { id: '5m-4', text: 'Inform direct reports (Supervisors only)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: '5m-5', text: 'Identify critical responsibilities needing coverage', roles: ['employee', 'manager'] },
+                    { id: '5m-6', text: 'Begin discussions about coverage assignments', roles: ['employee', 'manager'] },
+                    { id: '5m-7', text: 'Identify interim leadership needs (Supervisors only)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: '5m-8', text: 'Identify substitute/co-teacher needs (Teachers only)', roles: ['employee', 'manager'], teacherOnly: true },
+                ]
+            },
+            {
+                phase: '4-months',
+                title: '4 Months Before - Documentation & HR Prep',
+                tasks: [
+                    { id: '4m-1', text: 'Document key processes and procedures', roles: ['employee', 'manager'] },
+                    { id: '4m-2', text: 'Create "How To" guides for critical tasks', roles: ['employee', 'manager'] },
+                    { id: '4m-3', text: 'Identify and begin training backup person(s)', roles: ['employee', 'manager'] },
+                    { id: '4m-4', text: 'Document decision-making authority transfers (Supervisors)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: '4m-5', text: 'Prepare curriculum guides and student notes (Teachers)', roles: ['employee', 'manager'], teacherOnly: true },
+                    { id: '4m-6', text: 'Set up shared folders for coverage team', roles: ['employee', 'manager'] },
+                    { id: '4m-7', text: 'Confirm sabbatical dates with HR', roles: ['employee', 'hr'] },
+                    { id: '4m-8', text: 'Benefits reviews continuation plan', roles: ['employee', 'hr'] },
+                    { id: '4m-9', text: 'Payroll confirms pay adjustment', roles: ['hr'] },
+                ]
+            },
+            {
+                phase: '3-months',
+                title: '3 Months Before - Coverage Finalization',
+                tasks: [
+                    { id: '3m-1', text: 'Finalize coverage assignments (who does what)', roles: ['employee', 'manager'] },
+                    { id: '3m-2', text: 'Coverage person(s) confirmed and agreed', roles: ['employee', 'manager'] },
+                    { id: '3m-3', text: 'Manager approved coverage plan', roles: ['manager'] },
+                    { id: '3m-4', text: 'Share coverage plan with stakeholders', roles: ['employee', 'manager'] },
+                    { id: '3m-5', text: 'Begin shadowing/training for coverage person(s)', roles: ['employee', 'manager'] },
+                    { id: '3m-6', text: 'Interim leader announced to team (Supervisors)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: '3m-7', text: 'Draft announcement for team/school', roles: ['employee', 'manager'] },
+                ]
+            },
+            {
+                phase: '2-months',
+                title: '2 Months Before - Systems & Access',
+                tasks: [
+                    { id: '2m-1', text: 'HR updates UKG with sabbatical leave dates', roles: ['hr'] },
+                    { id: '2m-2', text: 'Request calendar blocks for sabbatical period', roles: ['employee'] },
+                    { id: '2m-3', text: 'Plan email delegation or forwarding', roles: ['employee', 'manager'] },
+                    { id: '2m-4', text: 'Identify accounts/systems needing access transfer', roles: ['employee', 'manager'] },
+                    { id: '2m-5', text: 'Transfer budget/approval authority (Supervisors)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: '2m-6', text: 'Complete handoff meetings with coverage person(s)', roles: ['employee', 'manager'] },
+                    { id: '2m-7', text: 'Coverage person handles tasks independently', roles: ['employee', 'manager'] },
+                    { id: '2m-8', text: 'Document remaining tribal knowledge', roles: ['employee', 'manager'] },
+                ]
+            },
+            {
+                phase: '1-month',
+                title: '1 Month Before - Final Prep',
+                tasks: [
+                    { id: '1m-1', text: 'Send formal announcement to team/school', roles: ['employee', 'manager'] },
+                    { id: '1m-2', text: 'Update email signature with coverage info', roles: ['employee'] },
+                    { id: '1m-3', text: 'Prepare email auto-response (don\'t activate yet)', roles: ['employee'] },
+                    { id: '1m-4', text: 'Final check-in with manager on coverage readiness', roles: ['employee', 'manager'] },
+                    { id: '1m-5', text: 'Confirm return date with HR', roles: ['employee', 'hr'] },
+                    { id: '1m-6', text: 'Payroll confirms first adjusted paycheck timing', roles: ['hr'] },
+                    { id: '1m-7', text: 'Benefits confirms coverage active through leave', roles: ['hr'] },
+                    { id: '1m-8', text: 'Complete or hand off pending projects', roles: ['employee', 'manager'] },
+                    { id: '1m-9', text: 'Clear/delegate inbox to manageable state', roles: ['employee'] },
+                    { id: '1m-10', text: 'Final 1:1s with direct reports (Supervisors)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: '1m-11', text: 'Final student/parent communications (Teachers)', roles: ['employee', 'manager'], teacherOnly: true },
+                    { id: '1m-12', text: 'Share "while I\'m out" document with key contacts', roles: ['employee', 'manager'] },
+                ]
+            },
+            {
+                phase: '1-2-weeks',
+                title: '1-2 Weeks Before - Go Live',
+                tasks: [
+                    { id: 'gl-1', text: 'Activate email auto-response', roles: ['employee'] },
+                    { id: 'gl-2', text: 'Final handoff meeting with coverage team', roles: ['employee', 'manager'] },
+                    { id: 'gl-3', text: 'Confirm emergency contact method (if any)', roles: ['employee', 'manager'] },
+                    { id: 'gl-4', text: 'HR confirms UKG status set to Sabbatical Leave', roles: ['hr'] },
+                    { id: 'gl-5', text: 'Payroll confirms adjusted pay processing', roles: ['hr'] },
+                    { id: 'gl-6', text: 'Last day wrap-up and celebration!', roles: ['employee', 'manager'] },
+                ]
+            },
+            {
+                phase: 'return-day1',
+                title: 'Return - Day 1',
+                tasks: [
+                    { id: 'rd1-1', text: 'Deactivate email auto-response', roles: ['employee'] },
+                    { id: 'rd1-2', text: 'Meet with manager for welcome back/overview', roles: ['employee', 'manager'] },
+                    { id: 'rd1-3', text: 'IT access confirmed working', roles: ['employee'] },
+                    { id: 'rd1-4', text: 'Building access confirmed working', roles: ['employee'] },
+                    { id: 'rd1-5', text: 'Review urgent items from coverage person', roles: ['employee'] },
+                    { id: 'rd1-6', text: 'HR updates UKG status to Active', roles: ['hr'] },
+                    { id: 'rd1-7', text: 'Payroll restores full pay', roles: ['hr'] },
+                ]
+            },
+            {
+                phase: 'return-week1',
+                title: 'Return - Week 1',
+                tasks: [
+                    { id: 'rw1-1', text: 'Meet with coverage person(s) for full handback', roles: ['employee', 'manager'] },
+                    { id: 'rw1-2', text: 'Review what changed while away', roles: ['employee', 'manager'] },
+                    { id: 'rw1-3', text: 'Meet with interim manager(s) who covered (Supervisors)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: 'rw1-4', text: 'Begin listening tour with staff (Supervisors)', roles: ['employee'], supervisorOnly: true },
+                    { id: 'rw1-5', text: 'Meet with substitute for student updates (Teachers)', roles: ['employee', 'manager'], teacherOnly: true },
+                    { id: 'rw1-6', text: 'Review student progress and concerns (Teachers)', roles: ['employee'], teacherOnly: true },
+                    { id: 'rw1-7', text: 'Benefits confirms any re-enrollment needed', roles: ['employee', 'hr'] },
+                    { id: 'rw1-8', text: 'HR confirms UKG fully updated', roles: ['hr'] },
+                ]
+            },
+            {
+                phase: 'return-week2',
+                title: 'Return - Week 2',
+                tasks: [
+                    { id: 'rw2-1', text: 'Complete listening tour (Supervisors)', roles: ['employee', 'manager'], supervisorOnly: true },
+                    { id: 'rw2-2', text: 'Resume direct reports 1:1s (Supervisors)', roles: ['employee'], supervisorOnly: true },
+                    { id: 'rw2-3', text: 'Fully resume classroom responsibilities (Teachers)', roles: ['employee', 'manager'], teacherOnly: true },
+                    { id: 'rw2-4', text: 'Debrief with manager on sabbatical experience', roles: ['employee', 'manager'] },
+                    { id: 'rw2-5', text: 'Sign return commitment acknowledgment', roles: ['employee', 'manager', 'hr'] },
+                    { id: 'rw2-6', text: 'Payroll confirms first full paycheck correct', roles: ['employee', 'hr'] },
+                    { id: 'rw2-7', text: 'Celebrate successful sabbatical completion!', roles: ['employee', 'manager'] },
+                ]
+            },
+        ];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
+            await loadSabbaticalData();
+        });
+
+        // Check authentication
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+                if (data.authenticated) {
+                    currentUser = data.user;
+                    document.getElementById('userName').textContent = data.user.name;
+                } else {
+                    // Redirect to login
+                    window.location.href = '/login?redirect=/my-sabbatical';
+                }
+            } catch (e) {
+                console.error('Auth check failed:', e);
+            }
+        }
+
+        // Load sabbatical data
+        async function loadSabbaticalData() {
+            try {
+                const response = await fetch('/api/my-sabbatical');
+                const data = await response.json();
+
+                document.getElementById('loadingState').classList.add('hidden');
+
+                if (data.found && data.sabbatical) {
+                    sabbaticalData = data.sabbatical;
+                    checklistData = data.checklist || [];
+                    coverageData = data.coverage || [];
+                    messagesData = data.messages || [];
+                    historyData = data.history || [];
+
+                    renderSabbaticalContent();
+                    document.getElementById('sabbaticalContent').classList.remove('hidden');
+                } else {
+                    document.getElementById('noSabbaticalState').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error('Failed to load sabbatical:', e);
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('noSabbaticalState').classList.remove('hidden');
+            }
+        }
+
+        // Render sabbatical content
+        function renderSabbaticalContent() {
+            const s = sabbaticalData;
+
+            // Avatar initials
+            const initials = s.employee_name.split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('avatarInitials').textContent = initials;
+
+            // Employee info
+            document.getElementById('employeeName').textContent = s.employee_name;
+            document.getElementById('employeeDetails').textContent = s.employee_location || 'FirstLine Schools';
+
+            // Status badge
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = s.status;
+            statusBadge.className = `px-4 py-2 rounded-full text-sm font-semibold status-${s.status.toLowerCase().replace(' ', '-')}`;
+
+            // Dates
+            document.getElementById('startDate').textContent = formatDate(s.start_date);
+            document.getElementById('endDate').textContent = formatDate(s.end_date);
+            document.getElementById('currentStartDate').textContent = formatDate(s.start_date);
+            document.getElementById('currentEndDate').textContent = formatDate(s.end_date);
+
+            // Option
+            const optionMatch = s.sabbatical_option.match(/(\d+)\s*Weeks?.*?(\d+)%/i);
+            if (optionMatch) {
+                document.getElementById('sabbaticalOption').textContent = optionMatch[1] + ' Weeks';
+                document.getElementById('salaryPercent').textContent = optionMatch[2] + '% Salary';
+            } else {
+                document.getElementById('sabbaticalOption').textContent = s.sabbatical_option;
+                document.getElementById('salaryPercent').textContent = '';
+            }
+
+            // Days until
+            if (s.start_date) {
+                const start = new Date(s.start_date);
+                const today = new Date();
+                const diff = Math.ceil((start - today) / (1000 * 60 * 60 * 24));
+
+                if (diff > 0) {
+                    document.getElementById('daysUntil').textContent = diff;
+                    document.getElementById('daysUntilLabel').textContent = 'days to start';
+                } else if (s.end_date) {
+                    const end = new Date(s.end_date);
+                    const returnDiff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+                    if (returnDiff > 0) {
+                        document.getElementById('daysUntil').textContent = returnDiff;
+                        document.getElementById('daysUntilLabel').textContent = 'days remaining';
+                    } else {
+                        document.getElementById('daysUntil').textContent = '0';
+                        document.getElementById('daysUntilLabel').textContent = 'complete!';
+                    }
+                }
+            }
+
+            // Render all tabs
+            renderChecklist();
+            renderCoverage();
+            renderMessages();
+            renderHistory();
+        }
+
+        // Render checklist
+        function renderChecklist() {
+            const container = document.getElementById('checklistContainer');
+            const phaseFilter = document.getElementById('phaseFilter').value;
+            const incompleteOnly = document.getElementById('incompleteOnly').checked;
+
+            let completedCount = 0;
+            let totalCount = 0;
+
+            let html = '';
+            checklistTemplate.forEach(phase => {
+                if (phaseFilter && phase.phase !== phaseFilter) return;
+
+                const phaseTasks = phase.tasks.filter(t => !t.supervisorOnly && !t.teacherOnly); // Simplified for now
+                const phaseCompleted = phaseTasks.filter(t => isTaskComplete(t.id)).length;
+                totalCount += phaseTasks.length;
+                completedCount += phaseCompleted;
+                const isPhaseComplete = phaseCompleted === phaseTasks.length;
+
+                if (incompleteOnly && isPhaseComplete) return;
+
+                html += `
+                    <div class="border rounded-lg overflow-hidden">
+                        <div class="checklist-phase bg-gray-50 px-4 py-3 flex items-center justify-between" onclick="togglePhase('${phase.phase}')">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-5 h-5 text-gray-400 transition-transform" id="arrow-${phase.phase}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                                <span class="font-semibold text-fls-navy">${phase.title}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm ${isPhaseComplete ? 'text-green-600' : 'text-gray-500'}">${phaseCompleted}/${phaseTasks.length}</span>
+                                ${isPhaseComplete ? '<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                            </div>
+                        </div>
+                        <div class="hidden" id="phase-${phase.phase}">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left font-medium text-gray-600">Task</th>
+                                        <th class="px-4 py-2 text-center font-medium text-gray-600 w-20">Employee</th>
+                                        <th class="px-4 py-2 text-center font-medium text-gray-600 w-20">Manager</th>
+                                        <th class="px-4 py-2 text-center font-medium text-gray-600 w-16">HR</th>
+                                        <th class="px-4 py-2 text-center font-medium text-gray-600 w-16">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${phaseTasks.map(task => {
+                                        const taskData = checklistData.find(c => c.task_id === task.id) || {};
+                                        const noteCount = taskData.notes ? taskData.notes.length : 0;
+                                        if (incompleteOnly && isTaskComplete(task.id)) return '';
+                                        return `
+                                            <tr class="border-t hover:bg-gray-50">
+                                                <td class="px-4 py-3">${task.text}</td>
+                                                <td class="px-4 py-2 text-center">
+                                                    ${task.roles.includes('employee') ? `
+                                                        <input type="checkbox" ${taskData.employee_done ? 'checked' : ''}
+                                                            onchange="updateTaskStatus('${task.id}', 'employee', this.checked)"
+                                                            class="w-5 h-5 rounded text-fls-orange focus:ring-fls-orange cursor-pointer">
+                                                    ` : '<span class="text-gray-300">-</span>'}
+                                                </td>
+                                                <td class="px-4 py-2 text-center">
+                                                    ${task.roles.includes('manager') ? `
+                                                        <input type="checkbox" ${taskData.manager_done ? 'checked' : ''}
+                                                            onchange="updateTaskStatus('${task.id}', 'manager', this.checked)"
+                                                            class="w-5 h-5 rounded text-fls-orange focus:ring-fls-orange cursor-pointer">
+                                                    ` : '<span class="text-gray-300">-</span>'}
+                                                </td>
+                                                <td class="px-4 py-2 text-center">
+                                                    ${task.roles.includes('hr') ? `
+                                                        <input type="checkbox" ${taskData.hr_done ? 'checked' : ''}
+                                                            onchange="updateTaskStatus('${task.id}', 'hr', this.checked)"
+                                                            class="w-5 h-5 rounded text-fls-orange focus:ring-fls-orange cursor-pointer">
+                                                    ` : '<span class="text-gray-300">-</span>'}
+                                                </td>
+                                                <td class="px-4 py-2 text-center">
+                                                    <button onclick="openNotesModal('${task.id}', '${task.text.replace(/'/g, "\\'")}')"
+                                                        class="text-fls-blue hover:text-fls-navy ${noteCount > 0 ? 'font-semibold' : ''}">
+                                                        ${noteCount > 0 ? `[${noteCount}]` : '[+]'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+
+            // Update progress
+            document.getElementById('completedTasks').textContent = completedCount;
+            document.getElementById('totalTasks').textContent = totalCount;
+            const pct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+            document.getElementById('checklistProgress').style.width = pct + '%';
+        }
+
+        function isTaskComplete(taskId) {
+            const task = checklistData.find(c => c.task_id === taskId);
+            if (!task) return false;
+            // Task is complete if all applicable roles have checked off
+            return task.employee_done || task.manager_done || task.hr_done;
+        }
+
+        function togglePhase(phase) {
+            const content = document.getElementById(`phase-${phase}`);
+            const arrow = document.getElementById(`arrow-${phase}`);
+            content.classList.toggle('hidden');
+            arrow.classList.toggle('rotate-180');
+        }
+
+        async function updateTaskStatus(taskId, role, checked) {
+            try {
+                const response = await fetch(`/api/my-sabbatical/checklist/${taskId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role, checked })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    // Update local data
+                    let task = checklistData.find(c => c.task_id === taskId);
+                    if (!task) {
+                        task = { task_id: taskId };
+                        checklistData.push(task);
+                    }
+                    task[`${role}_done`] = checked;
+                    renderChecklist();
+                }
+            } catch (e) {
+                console.error('Failed to update task:', e);
+            }
+        }
+
+        function filterChecklist() {
+            renderChecklist();
+        }
+
+        // Render coverage
+        function renderCoverage() {
+            const tbody = document.getElementById('coverageTable');
+            const noCoverage = document.getElementById('noCoverage');
+
+            if (coverageData.length > 0) {
+                tbody.innerHTML = coverageData.map(c => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium">${c.responsibility}</td>
+                        <td class="px-4 py-3">${c.covered_by}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-xs font-medium ${c.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
+                                ${c.status || 'Pending'}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 text-sm">${c.notes || '-'}</td>
+                        <td class="px-4 py-3">
+                            <button onclick="editCoverage('${c.id}')" class="text-fls-blue hover:underline text-sm">Edit</button>
+                        </td>
+                    </tr>
+                `).join('');
+                noCoverage.classList.add('hidden');
+            } else {
+                tbody.innerHTML = '';
+                noCoverage.classList.remove('hidden');
+            }
+
+            // Render contacts
+            const contacts = document.getElementById('coverageContacts');
+            contacts.innerHTML = `
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-xs text-gray-500 uppercase mb-1">Primary Contact</div>
+                    <div class="font-medium">${coverageData[0]?.covered_by || 'Not assigned'}</div>
+                    <div class="text-sm text-gray-500">${coverageData[0]?.email || ''}</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-xs text-gray-500 uppercase mb-1">Secondary Contact</div>
+                    <div class="font-medium">${coverageData[1]?.covered_by || 'Not assigned'}</div>
+                    <div class="text-sm text-gray-500">${coverageData[1]?.email || ''}</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="text-xs text-gray-500 uppercase mb-1">Emergency Contact</div>
+                    <div class="font-medium">School Principal</div>
+                    <div class="text-sm text-gray-500">For urgent matters only</div>
+                </div>
+            `;
+        }
+
+        // Render messages
+        function renderMessages() {
+            const list = document.getElementById('messagesList');
+            const noMessages = document.getElementById('noMessages');
+
+            if (messagesData.length > 0) {
+                list.innerHTML = messagesData.map(m => `
+                    <div class="border rounded-lg p-4 ${m.unread ? 'bg-blue-50 border-blue-200' : ''}">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-semibold text-fls-navy">${m.from_name}</span>
+                            <span class="text-xs text-gray-500">${formatDateTime(m.sent_at)}</span>
+                        </div>
+                        <p class="text-gray-700 text-sm">${m.message}</p>
+                        <button onclick="replyToMessage('${m.id}')" class="text-fls-blue text-sm mt-2 hover:underline">Reply</button>
+                    </div>
+                `).join('');
+                noMessages.classList.add('hidden');
+            } else {
+                list.innerHTML = '';
+                noMessages.classList.remove('hidden');
+            }
+
+            // Update unread badge
+            const unread = messagesData.filter(m => m.unread).length;
+            const badge = document.getElementById('unreadBadge');
+            if (unread > 0) {
+                badge.textContent = unread;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Render history
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            const noHistory = document.getElementById('noHistory');
+
+            if (historyData.length > 0) {
+                list.innerHTML = historyData.map(h => `
+                    <div class="flex items-start gap-3 text-sm">
+                        <div class="w-20 text-gray-500 flex-shrink-0">${formatShortDate(h.timestamp)}</div>
+                        <div class="text-gray-700">${h.description}</div>
+                    </div>
+                `).join('');
+                noHistory.classList.add('hidden');
+            } else {
+                list.innerHTML = '';
+                noHistory.classList.remove('hidden');
+            }
+        }
+
+        // Tab navigation
+        function showTab(tab) {
+            const tabs = ['checklist', 'coverage', 'documents', 'messages', 'history'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t}`).className = t === tab ? 'px-4 py-4 text-sm font-medium whitespace-nowrap tab-active' : 'px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive';
+                document.getElementById(`content-${t}`).classList.toggle('hidden', t !== tab);
+            });
+        }
+
+        // Modal functions
+        function openDateChangeModal() {
+            document.getElementById('dateChangeModal').classList.remove('hidden');
+            if (sabbaticalData.start_date) {
+                document.getElementById('newStartDate').value = sabbaticalData.start_date;
+            }
+            if (sabbaticalData.end_date) {
+                document.getElementById('newEndDate').value = sabbaticalData.end_date;
+            }
+        }
+
+        function closeDateChangeModal() {
+            document.getElementById('dateChangeModal').classList.add('hidden');
+        }
+
+        async function submitDateChange() {
+            const newStart = document.getElementById('newStartDate').value;
+            const newEnd = document.getElementById('newEndDate').value;
+            const reason = document.getElementById('dateChangeReason').value;
+
+            if (!newStart || !newEnd || !reason) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/my-sabbatical/date-change', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        new_start_date: newStart,
+                        new_end_date: newEnd,
+                        reason: reason
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Date change request submitted! Your manager and Talent team will be notified.');
+                    closeDateChangeModal();
+                } else {
+                    alert(result.error || 'Failed to submit request');
+                }
+            } catch (e) {
+                console.error('Failed to submit date change:', e);
+                alert('Failed to submit request');
+            }
+        }
+
+        function openNotesModal(taskId, taskText) {
+            currentTaskId = taskId;
+            document.getElementById('notesModalTitle').textContent = taskText;
+
+            const task = checklistData.find(c => c.task_id === taskId);
+            const notes = task?.notes || [];
+
+            const existingNotes = document.getElementById('existingNotes');
+            if (notes.length > 0) {
+                existingNotes.innerHTML = notes.map(n => `
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="font-medium text-sm">${n.author}</span>
+                            <span class="text-xs text-gray-500">${formatDateTime(n.timestamp)}</span>
+                        </div>
+                        <p class="text-sm text-gray-700">${n.text}</p>
+                    </div>
+                `).join('');
+            } else {
+                existingNotes.innerHTML = '<p class="text-gray-500 text-sm">No notes yet.</p>';
+            }
+
+            document.getElementById('newNoteText').value = '';
+            document.getElementById('notesModal').classList.remove('hidden');
+        }
+
+        function closeNotesModal() {
+            document.getElementById('notesModal').classList.add('hidden');
+            currentTaskId = null;
+        }
+
+        async function saveNote() {
+            const noteText = document.getElementById('newNoteText').value.trim();
+            if (!noteText) {
+                alert('Please enter a note');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/my-sabbatical/checklist/${currentTaskId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: noteText })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    // Update local data
+                    let task = checklistData.find(c => c.task_id === currentTaskId);
+                    if (!task) {
+                        task = { task_id: currentTaskId, notes: [] };
+                        checklistData.push(task);
+                    }
+                    if (!task.notes) task.notes = [];
+                    task.notes.push({
+                        author: currentUser.name,
+                        text: noteText,
+                        timestamp: new Date().toISOString()
+                    });
+                    closeNotesModal();
+                    renderChecklist();
+                } else {
+                    alert(result.error || 'Failed to save note');
+                }
+            } catch (e) {
+                console.error('Failed to save note:', e);
+                alert('Failed to save note');
+            }
+        }
+
+        function openAddCoverageModal() {
+            document.getElementById('coverageResponsibility').value = '';
+            document.getElementById('coveragePerson').value = '';
+            document.getElementById('coverageEmail').value = '';
+            document.getElementById('coverageNotes').value = '';
+            document.getElementById('coverageModal').classList.remove('hidden');
+        }
+
+        function closeCoverageModal() {
+            document.getElementById('coverageModal').classList.add('hidden');
+        }
+
+        async function saveCoverage() {
+            const responsibility = document.getElementById('coverageResponsibility').value.trim();
+            const person = document.getElementById('coveragePerson').value.trim();
+            const email = document.getElementById('coverageEmail').value.trim();
+            const notes = document.getElementById('coverageNotes').value.trim();
+
+            if (!responsibility || !person) {
+                alert('Please fill in responsibility and covered by');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/my-sabbatical/coverage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        responsibility,
+                        covered_by: person,
+                        email,
+                        notes
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    coverageData.push({
+                        id: result.id,
+                        responsibility,
+                        covered_by: person,
+                        email,
+                        notes,
+                        status: 'Pending'
+                    });
+                    closeCoverageModal();
+                    renderCoverage();
+                } else {
+                    alert(result.error || 'Failed to save coverage');
+                }
+            } catch (e) {
+                console.error('Failed to save coverage:', e);
+                alert('Failed to save coverage');
+            }
+        }
+
+        async function sendMessage() {
+            const recipient = document.getElementById('messageRecipient').value;
+            const text = document.getElementById('messageText').value.trim();
+
+            if (!recipient || !text) {
+                alert('Please select a recipient and enter a message');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/my-sabbatical/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient, message: text })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Message sent!');
+                    document.getElementById('messageRecipient').value = '';
+                    document.getElementById('messageText').value = '';
+                    // Reload messages
+                    await loadSabbaticalData();
+                } else {
+                    alert(result.error || 'Failed to send message');
+                }
+            } catch (e) {
+                console.error('Failed to send message:', e);
+                alert('Failed to send message');
+            }
+        }
+
+        // Utility functions
+        function formatDate(dateStr) {
+            if (!dateStr) return 'TBD';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+                   date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+
+        function formatShortDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+    </script>
+</body>
+</html>
