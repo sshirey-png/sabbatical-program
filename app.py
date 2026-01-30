@@ -594,23 +594,83 @@ def lookup_applications():
 
 @app.route('/api/staff/lookup', methods=['GET'])
 def lookup_staff():
-    """Look up staff info by email (for auto-fill)."""
+    """Look up staff info by email and check eligibility."""
     email = request.args.get('email', '').lower().strip()
 
     if not email:
         return jsonify({'error': 'Email required'}), 400
 
-    # Check previous applications to auto-fill info
-    all_applications = read_all_applications()
+    # Look up staff in staff_master_list_with_function
+    try:
+        query = """
+        SELECT
+            First_Name,
+            Last_Name,
+            Preferred_First_Name,
+            Email_Address,
+            Job_Title,
+            Location_Name,
+            Last_Hire_Date,
+            Employment_Status,
+            DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), YEAR) as years_of_service
+        FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+        WHERE LOWER(Email_Address) = @email
+        AND (Employment_Status IS NULL OR Employment_Status != 'Terminated')
+        LIMIT 1
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("email", "STRING", email)
+            ]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
 
-    for a in all_applications:
-        if a.get('employee_email', '').lower() == email:
+        for row in results:
+            # Use preferred name if available, otherwise first name
+            display_name = row.Preferred_First_Name or row.First_Name
+            full_name = f"{display_name} {row.Last_Name}"
+            years = row.years_of_service or 0
+
+            # Calculate eligibility (10+ years required)
+            is_eligible = years >= 10
+
+            # Format hire date
+            hire_date = row.Last_Hire_Date.strftime('%B %d, %Y') if row.Last_Hire_Date else 'Unknown'
+
             return jsonify({
                 'found': True,
-                'name': a.get('employee_name', '')
+                'name': full_name,
+                'first_name': display_name,
+                'last_name': row.Last_Name,
+                'job_title': row.Job_Title or '',
+                'location': row.Location_Name or '',
+                'hire_date': hire_date,
+                'years_of_service': years,
+                'is_eligible': is_eligible,
+                'eligibility_message': f"You have {years} years of service at FirstLine Schools." if is_eligible
+                    else f"You have {years} years of service. The sabbatical program requires 10+ years of continuous service."
             })
 
-    return jsonify({'found': False})
+        # Not found in staff list - check previous applications as fallback
+        all_applications = read_all_applications()
+        for a in all_applications:
+            if a.get('employee_email', '').lower() == email:
+                return jsonify({
+                    'found': True,
+                    'name': a.get('employee_name', ''),
+                    'is_eligible': None,  # Can't determine
+                    'eligibility_message': 'Unable to verify years of service. Please contact HR.'
+                })
+
+        return jsonify({
+            'found': False,
+            'is_eligible': False,
+            'eligibility_message': 'Email not found in staff directory. Please use your @firstlineschools.org email.'
+        })
+
+    except Exception as e:
+        logger.error(f"Staff lookup error: {e}")
+        return jsonify({'error': 'Lookup failed', 'found': False}), 500
 
 
 @app.route('/api/options', methods=['GET'])

@@ -186,14 +186,26 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Your Email *</label>
                                 <input type="email" name="employee_email" id="employeeEmail" required
                                     placeholder="youremail@firstlineschools.org"
-                                    onblur="autoFillFromEmail()"
+                                    onblur="checkEligibility()"
                                     class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange">
-                                <p class="text-xs text-gray-500 mt-1">Enter your @firstlineschools.org email</p>
+                                <p class="text-xs text-gray-500 mt-1">Enter your @firstlineschools.org email to check eligibility</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Your Name *</label>
                                 <input type="text" name="employee_name" id="employeeName" required
                                     class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange">
+                            </div>
+                        </div>
+
+                        <!-- Eligibility Status -->
+                        <div id="eligibilityStatus" class="hidden mt-4 p-4 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <div id="eligibilityIcon"></div>
+                                <div>
+                                    <div id="eligibilityTitle" class="font-semibold"></div>
+                                    <div id="eligibilityMessage" class="text-sm"></div>
+                                    <div id="eligibilityDetails" class="text-xs text-gray-500 mt-1"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -523,10 +535,27 @@
             }
         }
 
-        // Auto-fill from email
-        async function autoFillFromEmail() {
+        // Track eligibility status
+        let currentEligibility = null;
+
+        // Check eligibility and auto-fill from email
+        async function checkEligibility() {
             const email = document.getElementById('employeeEmail').value;
             if (!email) return;
+
+            const statusDiv = document.getElementById('eligibilityStatus');
+            const iconDiv = document.getElementById('eligibilityIcon');
+            const titleDiv = document.getElementById('eligibilityTitle');
+            const messageDiv = document.getElementById('eligibilityMessage');
+            const detailsDiv = document.getElementById('eligibilityDetails');
+
+            // Show loading state
+            statusDiv.className = 'mt-4 p-4 rounded-lg bg-gray-100';
+            statusDiv.classList.remove('hidden');
+            iconDiv.innerHTML = '<div class="loader"></div>';
+            titleDiv.textContent = 'Checking eligibility...';
+            messageDiv.textContent = '';
+            detailsDiv.textContent = '';
 
             try {
                 const response = await fetch(`/api/staff/lookup?email=${encodeURIComponent(email)}`);
@@ -534,9 +563,70 @@
 
                 if (data.found) {
                     document.getElementById('employeeName').value = data.name;
+                    currentEligibility = data.is_eligible;
+
+                    if (data.is_eligible === true) {
+                        // Eligible - green
+                        statusDiv.className = 'mt-4 p-4 rounded-lg bg-green-100 border border-green-300';
+                        iconDiv.innerHTML = `<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>`;
+                        titleDiv.className = 'font-semibold text-green-800';
+                        titleDiv.textContent = 'Eligible for Sabbatical';
+                        messageDiv.className = 'text-sm text-green-700';
+                        messageDiv.textContent = data.eligibility_message;
+                        detailsDiv.textContent = data.job_title && data.location
+                            ? `${data.job_title} at ${data.location} • Hired: ${data.hire_date}`
+                            : '';
+                    } else if (data.is_eligible === false) {
+                        // Not eligible - red
+                        statusDiv.className = 'mt-4 p-4 rounded-lg bg-red-100 border border-red-300';
+                        iconDiv.innerHTML = `<svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>`;
+                        titleDiv.className = 'font-semibold text-red-800';
+                        titleDiv.textContent = 'Not Yet Eligible';
+                        messageDiv.className = 'text-sm text-red-700';
+                        messageDiv.textContent = data.eligibility_message;
+                        detailsDiv.textContent = data.job_title && data.location
+                            ? `${data.job_title} at ${data.location} • Hired: ${data.hire_date}`
+                            : '';
+                    } else {
+                        // Unknown eligibility - yellow
+                        statusDiv.className = 'mt-4 p-4 rounded-lg bg-yellow-100 border border-yellow-300';
+                        iconDiv.innerHTML = `<svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>`;
+                        titleDiv.className = 'font-semibold text-yellow-800';
+                        titleDiv.textContent = 'Eligibility Unknown';
+                        messageDiv.className = 'text-sm text-yellow-700';
+                        messageDiv.textContent = data.eligibility_message;
+                        detailsDiv.textContent = '';
+                    }
+                } else {
+                    // Not found
+                    currentEligibility = false;
+                    statusDiv.className = 'mt-4 p-4 rounded-lg bg-red-100 border border-red-300';
+                    iconDiv.innerHTML = `<svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>`;
+                    titleDiv.className = 'font-semibold text-red-800';
+                    titleDiv.textContent = 'Email Not Found';
+                    messageDiv.className = 'text-sm text-red-700';
+                    messageDiv.textContent = data.eligibility_message || 'Please use your @firstlineschools.org email address.';
+                    detailsDiv.textContent = '';
                 }
             } catch (e) {
-                console.error('Auto-fill failed:', e);
+                console.error('Eligibility check failed:', e);
+                statusDiv.className = 'mt-4 p-4 rounded-lg bg-yellow-100 border border-yellow-300';
+                iconDiv.innerHTML = `<svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>`;
+                titleDiv.className = 'font-semibold text-yellow-800';
+                titleDiv.textContent = 'Unable to Check';
+                messageDiv.className = 'text-sm text-yellow-700';
+                messageDiv.textContent = 'Could not verify eligibility. You may still submit your application.';
+                detailsDiv.textContent = '';
             }
         }
 
