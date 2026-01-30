@@ -60,6 +60,7 @@ STATUS_VALUES = [
     'Submitted',
     'Under Review',
     'Approved',
+    'Completed',
     'Denied',
     'Withdrawn'
 ]
@@ -926,6 +927,7 @@ def get_stats():
     submitted = len([a for a in applications if a.get('status') == 'Submitted'])
     under_review = len([a for a in applications if a.get('status') == 'Under Review'])
     approved = len([a for a in applications if a.get('status') == 'Approved'])
+    completed = len([a for a in applications if a.get('status') == 'Completed'])
     denied = len([a for a in applications if a.get('status') == 'Denied'])
     withdrawn = len([a for a in applications if a.get('status') == 'Withdrawn'])
 
@@ -934,6 +936,7 @@ def get_stats():
         'submitted': submitted,
         'under_review': under_review,
         'approved': approved,
+        'completed': completed,
         'denied': denied,
         'withdrawn': withdrawn
     })

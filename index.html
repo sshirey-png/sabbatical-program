@@ -31,6 +31,7 @@
         .status-submitted { background-color: #fef3c7; color: #92400e; }
         .status-under-review { background-color: #dbeafe; color: #1e40af; }
         .status-approved { background-color: #dcfce7; color: #166534; }
+        .status-completed { background-color: #d1fae5; color: #065f46; }
         .status-denied { background-color: #fee2e2; color: #991b1b; }
         .status-withdrawn { background-color: #f3f4f6; color: #6b7280; }
         .loader {
@@ -453,7 +454,7 @@
             </div>
 
             <!-- Stats Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
                 <div class="bg-white rounded-lg p-4 shadow">
                     <div class="text-3xl font-bold text-fls-navy" id="statTotal">0</div>
                     <div class="text-sm text-gray-600">Total</div>
@@ -470,9 +471,17 @@
                     <div class="text-3xl font-bold text-green-700" id="statApproved">0</div>
                     <div class="text-sm text-gray-600">Approved</div>
                 </div>
+                <div class="bg-emerald-100 rounded-lg p-4 shadow">
+                    <div class="text-3xl font-bold text-emerald-700" id="statCompleted">0</div>
+                    <div class="text-sm text-gray-600">Completed</div>
+                </div>
                 <div class="bg-red-100 rounded-lg p-4 shadow">
                     <div class="text-3xl font-bold text-red-700" id="statDenied">0</div>
                     <div class="text-sm text-gray-600">Denied</div>
+                </div>
+                <div class="bg-gray-100 rounded-lg p-4 shadow">
+                    <div class="text-3xl font-bold text-gray-600" id="statWithdrawn">0</div>
+                    <div class="text-sm text-gray-600">Withdrawn</div>
                 </div>
             </div>
 
@@ -500,6 +509,7 @@
                                 <option value="Submitted">Submitted</option>
                                 <option value="Under Review">Under Review</option>
                                 <option value="Approved">Approved</option>
+                                <option value="Completed">Completed</option>
                                 <option value="Denied">Denied</option>
                                 <option value="Withdrawn">Withdrawn</option>
                             </select>
@@ -901,6 +911,7 @@
         function getCalendarStatusBg(status) {
             const bgs = {
                 'Approved': 'bg-green-50',
+                'Completed': 'bg-emerald-50',
                 'Under Review': 'bg-blue-50',
                 'Submitted': 'bg-yellow-50'
             };
@@ -1053,7 +1064,9 @@
                 document.getElementById('statSubmitted').textContent = stats.submitted;
                 document.getElementById('statUnderReview').textContent = stats.under_review;
                 document.getElementById('statApproved').textContent = stats.approved;
+                document.getElementById('statCompleted').textContent = stats.completed;
                 document.getElementById('statDenied').textContent = stats.denied;
+                document.getElementById('statWithdrawn').textContent = stats.withdrawn;
 
                 // Load applications
                 const appsResponse = await fetch('/api/admin/applications');
@@ -1188,6 +1201,7 @@
                                 <option value="Submitted" ${app.status === 'Submitted' ? 'selected' : ''}>Submitted</option>
                                 <option value="Under Review" ${app.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
                                 <option value="Approved" ${app.status === 'Approved' ? 'selected' : ''}>Approved</option>
+                                <option value="Completed" ${app.status === 'Completed' ? 'selected' : ''}>Completed</option>
                                 <option value="Denied" ${app.status === 'Denied' ? 'selected' : ''}>Denied</option>
                                 <option value="Withdrawn" ${app.status === 'Withdrawn' ? 'selected' : ''}>Withdrawn</option>
                             </select>
@@ -1257,6 +1271,7 @@
                 'Submitted': 'status-submitted',
                 'Under Review': 'status-under-review',
                 'Approved': 'status-approved',
+                'Completed': 'status-completed',
                 'Denied': 'status-denied',
                 'Withdrawn': 'status-withdrawn'
             };
