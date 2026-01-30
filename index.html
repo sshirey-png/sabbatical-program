@@ -244,6 +244,33 @@
                                     class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange"></textarea>
                             </div>
 
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                                    <input type="date" name="start_date" id="startDate" required
+                                        onchange="checkConflicts()"
+                                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
+                                    <input type="date" name="end_date" id="endDate" required
+                                        onchange="checkConflicts()"
+                                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange">
+                                </div>
+                            </div>
+
+                            <!-- Conflict Status -->
+                            <div id="conflictStatus" class="hidden p-4 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div id="conflictIcon"></div>
+                                    <div>
+                                        <div id="conflictTitle" class="font-semibold"></div>
+                                        <div id="conflictMessage" class="text-sm"></div>
+                                        <div id="conflictDetails" class="text-xs mt-1"></div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Are you flexible with your dates? *</label>
                                 <div class="flex gap-6">
@@ -302,23 +329,35 @@
                                     class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange"></textarea>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <div class="bg-fls-light-blue p-4 rounded-lg border border-fls-navy">
+                                <label class="block text-sm font-semibold text-fls-navy mb-2">
                                     Have you had a conversation with your School Director or Manager about this? *
                                 </label>
-                                <div class="flex gap-6">
+                                <div class="flex gap-6 mb-2">
                                     <label class="flex items-center gap-2 cursor-pointer">
                                         <input type="radio" name="manager_discussion" value="Yes" required
+                                            onchange="toggleManagerWarning()"
                                             class="w-4 h-4 text-fls-orange focus:ring-fls-orange">
-                                        <span>Yes</span>
+                                        <span>Yes, I have discussed this with my manager</span>
                                     </label>
                                     <label class="flex items-center gap-2 cursor-pointer">
                                         <input type="radio" name="manager_discussion" value="Not Yet"
+                                            onchange="toggleManagerWarning()"
                                             class="w-4 h-4 text-fls-orange focus:ring-fls-orange">
                                         <span>Not Yet</span>
                                     </label>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-1">We recommend discussing with your supervisor before submitting.</p>
+                                <div id="managerWarning" class="hidden bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg mt-3">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                        </svg>
+                                        <div>
+                                            <strong>Important:</strong> Please notify your School Director or Manager before submitting this application.
+                                            They need to be aware of your plans to help with coverage planning.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -437,26 +476,40 @@
                 </div>
             </div>
 
-            <!-- Filter Bar -->
-            <div class="bg-white rounded-lg shadow p-4 mb-6">
-                <div class="flex flex-wrap gap-4 items-center">
-                    <div>
-                        <label class="text-sm font-medium text-gray-700 mr-2">Filter by Status:</label>
-                        <select id="statusFilter" onchange="filterApplications()" class="px-3 py-2 border rounded-lg text-sm">
-                            <option value="">All</option>
-                            <option value="Submitted">Submitted</option>
-                            <option value="Under Review">Under Review</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Denied">Denied</option>
-                            <option value="Withdrawn">Withdrawn</option>
-                        </select>
-                    </div>
-                    <div class="flex-1">
-                        <input type="text" id="searchInput" onkeyup="filterApplications()" placeholder="Search by name or email..."
-                            class="w-full max-w-sm px-3 py-2 border rounded-lg text-sm">
+            <!-- Admin Tabs -->
+            <div class="flex gap-2 mb-6">
+                <button id="tabApplications" onclick="showAdminTab('applications')"
+                    class="px-4 py-2 rounded-lg font-medium bg-fls-navy text-white">
+                    Applications
+                </button>
+                <button id="tabCalendar" onclick="showAdminTab('calendar')"
+                    class="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
+                    Calendar View
+                </button>
+            </div>
+
+            <!-- Applications Tab -->
+            <div id="applicationsTab">
+                <!-- Filter Bar -->
+                <div class="bg-white rounded-lg shadow p-4 mb-6">
+                    <div class="flex flex-wrap gap-4 items-center">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 mr-2">Filter by Status:</label>
+                            <select id="statusFilter" onchange="filterApplications()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="">All</option>
+                                <option value="Submitted">Submitted</option>
+                                <option value="Under Review">Under Review</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Denied">Denied</option>
+                                <option value="Withdrawn">Withdrawn</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <input type="text" id="searchInput" onkeyup="filterApplications()" placeholder="Search by name or email..."
+                                class="w-full max-w-sm px-3 py-2 border rounded-lg text-sm">
+                        </div>
                     </div>
                 </div>
-            </div>
 
             <!-- Applications Table -->
             <div class="bg-white rounded-lg shadow overflow-hidden">
@@ -478,6 +531,28 @@
                 </div>
                 <div id="noAdminApplications" class="hidden text-center text-gray-500 py-8">
                     No applications found.
+                </div>
+            </div>
+            </div> <!-- End Applications Tab -->
+
+            <!-- Calendar Tab -->
+            <div id="calendarTab" class="hidden">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-fls-navy mb-4">Sabbatical Calendar</h2>
+                    <p class="text-gray-600 mb-6">View scheduled sabbaticals by location. Green = Approved, Blue = Under Review, Yellow = Submitted</p>
+
+                    <!-- Calendar by Location -->
+                    <div id="calendarByLocation" class="space-y-6">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Timeline View -->
+                    <div class="mt-8">
+                        <h3 class="text-lg font-semibold text-fls-navy mb-4">Timeline View</h3>
+                        <div id="calendarTimeline" class="space-y-2">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -535,8 +610,9 @@
             }
         }
 
-        // Track eligibility status
+        // Track eligibility status and location
         let currentEligibility = null;
+        let currentEmployeeLocation = '';
 
         // Check eligibility and auto-fill from email
         async function checkEligibility() {
@@ -564,6 +640,7 @@
                 if (data.found) {
                     document.getElementById('employeeName').value = data.name;
                     currentEligibility = data.is_eligible;
+                    currentEmployeeLocation = data.location || '';
 
                     if (data.is_eligible === true) {
                         // Eligible - green
@@ -642,6 +719,194 @@
             }
         }
 
+        // Toggle manager warning
+        function toggleManagerWarning() {
+            const managerDiscussion = document.querySelector('input[name="manager_discussion"]:checked')?.value;
+            const warningDiv = document.getElementById('managerWarning');
+
+            if (managerDiscussion === 'Not Yet') {
+                warningDiv.classList.remove('hidden');
+            } else {
+                warningDiv.classList.add('hidden');
+            }
+        }
+
+        // Check for conflicts at location during date range
+        async function checkConflicts() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            // Need both dates and location to check
+            if (!startDate || !endDate || !currentEmployeeLocation) {
+                document.getElementById('conflictStatus').classList.add('hidden');
+                return;
+            }
+
+            const statusDiv = document.getElementById('conflictStatus');
+            const iconDiv = document.getElementById('conflictIcon');
+            const titleDiv = document.getElementById('conflictTitle');
+            const messageDiv = document.getElementById('conflictMessage');
+            const detailsDiv = document.getElementById('conflictDetails');
+
+            // Show loading
+            statusDiv.className = 'p-4 rounded-lg bg-gray-100';
+            statusDiv.classList.remove('hidden');
+            iconDiv.innerHTML = '<div class="loader"></div>';
+            titleDiv.textContent = 'Checking availability...';
+            messageDiv.textContent = '';
+            detailsDiv.textContent = '';
+
+            try {
+                const params = new URLSearchParams({
+                    location: currentEmployeeLocation,
+                    start_date: startDate,
+                    end_date: endDate
+                });
+                const response = await fetch(`/api/conflicts/check?${params}`);
+                const data = await response.json();
+
+                if (data.status === 'ok') {
+                    // No conflicts - green
+                    statusDiv.className = 'p-4 rounded-lg bg-green-100 border border-green-300';
+                    iconDiv.innerHTML = `<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>`;
+                    titleDiv.className = 'font-semibold text-green-800';
+                    titleDiv.textContent = 'No Scheduling Conflicts';
+                    messageDiv.className = 'text-sm text-green-700';
+                    messageDiv.textContent = data.message;
+                    detailsDiv.textContent = '';
+                } else if (data.status === 'warning') {
+                    // 1 conflict - yellow warning
+                    statusDiv.className = 'p-4 rounded-lg bg-yellow-100 border border-yellow-300';
+                    iconDiv.innerHTML = `<svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>`;
+                    titleDiv.className = 'font-semibold text-yellow-800';
+                    titleDiv.textContent = 'Scheduling Note';
+                    messageDiv.className = 'text-sm text-yellow-700';
+                    messageDiv.textContent = data.message;
+                    // Show existing sabbaticals
+                    if (data.conflicts && data.conflicts.length > 0) {
+                        const names = data.conflicts.map(c => `${c.employee_name} (${c.status})`).join(', ');
+                        detailsDiv.className = 'text-xs text-yellow-600 mt-1';
+                        detailsDiv.textContent = `Currently scheduled: ${names}`;
+                    }
+                } else if (data.status === 'blocked') {
+                    // 2+ conflicts - red blocked
+                    statusDiv.className = 'p-4 rounded-lg bg-red-100 border border-red-300';
+                    iconDiv.innerHTML = `<svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>`;
+                    titleDiv.className = 'font-semibold text-red-800';
+                    titleDiv.textContent = 'Schedule Conflict';
+                    messageDiv.className = 'text-sm text-red-700';
+                    messageDiv.textContent = data.message;
+                    // Show existing sabbaticals
+                    if (data.conflicts && data.conflicts.length > 0) {
+                        const names = data.conflicts.map(c => `${c.employee_name} (${c.status})`).join(', ');
+                        detailsDiv.className = 'text-xs text-red-600 mt-1';
+                        detailsDiv.textContent = `Currently scheduled: ${names}`;
+                    }
+                }
+            } catch (e) {
+                console.error('Conflict check failed:', e);
+                statusDiv.classList.add('hidden');
+            }
+        }
+
+        // Show admin tab (Applications or Calendar)
+        function showAdminTab(tab) {
+            const applicationsTab = document.getElementById('applicationsTab');
+            const calendarTab = document.getElementById('calendarTab');
+            const tabApplicationsBtn = document.getElementById('tabApplications');
+            const tabCalendarBtn = document.getElementById('tabCalendar');
+
+            if (tab === 'applications') {
+                applicationsTab.classList.remove('hidden');
+                calendarTab.classList.add('hidden');
+                tabApplicationsBtn.className = 'px-4 py-2 rounded-lg font-medium bg-fls-navy text-white';
+                tabCalendarBtn.className = 'px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300';
+            } else if (tab === 'calendar') {
+                applicationsTab.classList.add('hidden');
+                calendarTab.classList.remove('hidden');
+                tabApplicationsBtn.className = 'px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300';
+                tabCalendarBtn.className = 'px-4 py-2 rounded-lg font-medium bg-fls-navy text-white';
+                loadCalendarData();
+            }
+        }
+
+        // Load calendar data
+        async function loadCalendarData() {
+            try {
+                const response = await fetch('/api/calendar');
+                const data = await response.json();
+                renderCalendar(data);
+            } catch (e) {
+                console.error('Failed to load calendar:', e);
+            }
+        }
+
+        // Render calendar view
+        function renderCalendar(data) {
+            const byLocationDiv = document.getElementById('calendarByLocation');
+            const timelineDiv = document.getElementById('calendarTimeline');
+
+            // Render by location
+            if (data.by_location && Object.keys(data.by_location).length > 0) {
+                byLocationDiv.innerHTML = Object.entries(data.by_location).map(([location, apps]) => `
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-semibold text-fls-navy mb-3">${location}</h3>
+                        <div class="space-y-2">
+                            ${apps.map(app => `
+                                <div class="flex items-center gap-3 p-2 rounded ${getCalendarStatusBg(app.status)}">
+                                    <span class="font-medium">${app.employee_name}</span>
+                                    <span class="text-sm text-gray-600">${app.sabbatical_option}</span>
+                                    <span class="text-sm">${app.start_date || ''} - ${app.end_date || ''}</span>
+                                    <span class="px-2 py-0.5 rounded text-xs ${getStatusClass(app.status)}">${app.status}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                byLocationDiv.innerHTML = '<p class="text-gray-500">No sabbaticals scheduled.</p>';
+            }
+
+            // Render timeline
+            if (data.applications && data.applications.length > 0) {
+                // Sort by start date
+                const sorted = data.applications
+                    .filter(a => a.start_date)
+                    .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+
+                timelineDiv.innerHTML = sorted.map(app => `
+                    <div class="flex items-center gap-4 p-3 border rounded-lg ${getCalendarStatusBg(app.status)}">
+                        <div class="w-32 text-sm font-mono">${app.start_date || 'TBD'}</div>
+                        <div class="w-8 text-center">→</div>
+                        <div class="w-32 text-sm font-mono">${app.end_date || 'TBD'}</div>
+                        <div class="flex-1">
+                            <span class="font-medium">${app.employee_name}</span>
+                            <span class="text-sm text-gray-500 ml-2">(${app.employee_location || 'Unknown'})</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-xs ${getStatusClass(app.status)}">${app.status}</span>
+                    </div>
+                `).join('');
+            } else {
+                timelineDiv.innerHTML = '<p class="text-gray-500">No sabbaticals with dates scheduled.</p>';
+            }
+        }
+
+        // Get background color for calendar based on status
+        function getCalendarStatusBg(status) {
+            const bgs = {
+                'Approved': 'bg-green-50',
+                'Under Review': 'bg-blue-50',
+                'Submitted': 'bg-yellow-50'
+            };
+            return bgs[status] || 'bg-gray-50';
+        }
+
         // Submit application
         document.getElementById('applicationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -657,8 +922,11 @@
             const data = {
                 employee_name: formData.get('employee_name'),
                 employee_email: formData.get('employee_email'),
+                employee_location: currentEmployeeLocation,
                 sabbatical_option: formData.get('sabbatical_option'),
                 preferred_dates: formData.get('preferred_dates'),
+                start_date: formData.get('start_date') || '',
+                end_date: formData.get('end_date') || '',
                 date_flexibility: formData.get('date_flexibility'),
                 flexibility_explanation: formData.get('flexibility_explanation') || '',
                 sabbatical_purpose: formData.get('sabbatical_purpose'),
@@ -684,6 +952,14 @@
                     document.getElementById('successApplicationId').textContent = result.application_id;
                     document.getElementById('errorMessage').classList.add('hidden');
                     form.reset();
+
+                    // Reset state variables and hide status displays
+                    currentEligibility = null;
+                    currentEmployeeLocation = '';
+                    document.getElementById('eligibilityStatus').classList.add('hidden');
+                    document.getElementById('conflictStatus').classList.add('hidden');
+                    document.getElementById('managerWarning').classList.add('hidden');
+                    document.getElementById('flexibilityExplanation').classList.add('hidden');
 
                     // Scroll to success message
                     document.getElementById('successMessage').scrollIntoView({ behavior: 'smooth' });
@@ -802,9 +1078,13 @@
                         <td class="px-4 py-3">
                             <div class="font-medium">${app.employee_name}</div>
                             <div class="text-xs text-gray-500">${app.employee_email}</div>
+                            ${app.employee_location ? `<div class="text-xs text-gray-400">${app.employee_location}</div>` : ''}
                         </td>
                         <td class="px-4 py-3">${app.sabbatical_option}</td>
-                        <td class="px-4 py-3 max-w-xs truncate" title="${app.preferred_dates}">${app.preferred_dates}</td>
+                        <td class="px-4 py-3 max-w-xs">
+                            <div class="truncate" title="${app.preferred_dates}">${app.preferred_dates}</div>
+                            ${app.start_date && app.end_date ? `<div class="text-xs text-gray-500">${app.start_date} - ${app.end_date}</div>` : ''}
+                        </td>
                         <td class="px-4 py-3">
                             <span class="px-3 py-1 rounded-full text-xs font-medium ${getStatusClass(app.status)}">
                                 ${app.status}
@@ -855,8 +1135,9 @@
                         <div class="grid grid-cols-2 gap-2 text-sm">
                             <div><span class="text-gray-500">Name:</span> ${app.employee_name}</div>
                             <div><span class="text-gray-500">Email:</span> ${app.employee_email}</div>
-                            <div><span class="text-gray-500">Application ID:</span> ${app.application_id}</div>
+                            <div><span class="text-gray-500">Location:</span> ${app.employee_location || 'Not specified'}</div>
                             <div><span class="text-gray-500">Submitted:</span> ${formatDate(app.submitted_at)}</div>
+                            <div class="col-span-2"><span class="text-gray-500">Application ID:</span> ${app.application_id}</div>
                         </div>
                     </div>
 
@@ -866,6 +1147,8 @@
                         <div class="space-y-2 text-sm">
                             <div><span class="text-gray-500">Option:</span> ${app.sabbatical_option}</div>
                             <div><span class="text-gray-500">Preferred Dates:</span> ${app.preferred_dates}</div>
+                            ${app.start_date ? `<div><span class="text-gray-500">Start Date:</span> ${app.start_date}</div>` : ''}
+                            ${app.end_date ? `<div><span class="text-gray-500">End Date:</span> ${app.end_date}</div>` : ''}
                             <div><span class="text-gray-500">Date Flexibility:</span> ${app.date_flexibility}</div>
                             ${app.flexibility_explanation ? `<div><span class="text-gray-500">Flexibility Details:</span> ${app.flexibility_explanation}</div>` : ''}
                             <div><span class="text-gray-500">Manager Discussion:</span> ${app.manager_discussion}</div>

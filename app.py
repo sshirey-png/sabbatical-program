@@ -301,8 +301,11 @@ def ensure_table_exists():
             bigquery.SchemaField("submitted_at", "TIMESTAMP", mode="REQUIRED"),
             bigquery.SchemaField("employee_name", "STRING"),
             bigquery.SchemaField("employee_email", "STRING"),
+            bigquery.SchemaField("employee_location", "STRING"),
             bigquery.SchemaField("sabbatical_option", "STRING"),
             bigquery.SchemaField("preferred_dates", "STRING"),
+            bigquery.SchemaField("start_date", "DATE"),
+            bigquery.SchemaField("end_date", "DATE"),
             bigquery.SchemaField("date_flexibility", "STRING"),
             bigquery.SchemaField("flexibility_explanation", "STRING"),
             bigquery.SchemaField("sabbatical_purpose", "STRING"),
@@ -334,8 +337,11 @@ def row_to_dict(row):
         'submitted_at': row.submitted_at.isoformat() if row.submitted_at else '',
         'employee_name': row.employee_name or '',
         'employee_email': row.employee_email or '',
+        'employee_location': getattr(row, 'employee_location', '') or '',
         'sabbatical_option': row.sabbatical_option or '',
         'preferred_dates': row.preferred_dates or '',
+        'start_date': row.start_date.isoformat() if getattr(row, 'start_date', None) else '',
+        'end_date': row.end_date.isoformat() if getattr(row, 'end_date', None) else '',
         'date_flexibility': row.date_flexibility or '',
         'flexibility_explanation': row.flexibility_explanation or '',
         'sabbatical_purpose': row.sabbatical_purpose or '',
@@ -395,14 +401,16 @@ def append_application(application_data):
 
         query = f"""
         INSERT INTO `{get_full_table_id()}` (
-            application_id, submitted_at, employee_name, employee_email,
-            sabbatical_option, preferred_dates, date_flexibility, flexibility_explanation,
+            application_id, submitted_at, employee_name, employee_email, employee_location,
+            sabbatical_option, preferred_dates, start_date, end_date,
+            date_flexibility, flexibility_explanation,
             sabbatical_purpose, why_now, coverage_plan, manager_discussion,
             ack_one_year, ack_no_other_job, additional_notes,
             status, status_updated_at, status_updated_by, admin_notes
         ) VALUES (
-            @application_id, @submitted_at, @employee_name, @employee_email,
-            @sabbatical_option, @preferred_dates, @date_flexibility, @flexibility_explanation,
+            @application_id, @submitted_at, @employee_name, @employee_email, @employee_location,
+            @sabbatical_option, @preferred_dates, @start_date, @end_date,
+            @date_flexibility, @flexibility_explanation,
             @sabbatical_purpose, @why_now, @coverage_plan, @manager_discussion,
             @ack_one_year, @ack_no_other_job, @additional_notes,
             @status, @status_updated_at, @status_updated_by, @admin_notes
@@ -412,14 +420,31 @@ def append_application(application_data):
         submitted_at = datetime.fromisoformat(application_data['submitted_at']) if application_data.get('submitted_at') else datetime.now()
         status_updated_at = datetime.fromisoformat(application_data['status_updated_at']) if application_data.get('status_updated_at') else datetime.now()
 
+        # Parse start and end dates if provided
+        start_date = None
+        end_date = None
+        if application_data.get('start_date'):
+            try:
+                start_date = datetime.strptime(application_data['start_date'], '%Y-%m-%d').date()
+            except:
+                pass
+        if application_data.get('end_date'):
+            try:
+                end_date = datetime.strptime(application_data['end_date'], '%Y-%m-%d').date()
+            except:
+                pass
+
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("application_id", "STRING", application_data.get('application_id', '')),
                 bigquery.ScalarQueryParameter("submitted_at", "TIMESTAMP", submitted_at),
                 bigquery.ScalarQueryParameter("employee_name", "STRING", application_data.get('employee_name', '')),
                 bigquery.ScalarQueryParameter("employee_email", "STRING", application_data.get('employee_email', '')),
+                bigquery.ScalarQueryParameter("employee_location", "STRING", application_data.get('employee_location', '')),
                 bigquery.ScalarQueryParameter("sabbatical_option", "STRING", application_data.get('sabbatical_option', '')),
                 bigquery.ScalarQueryParameter("preferred_dates", "STRING", application_data.get('preferred_dates', '')),
+                bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
+                bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
                 bigquery.ScalarQueryParameter("date_flexibility", "STRING", application_data.get('date_flexibility', '')),
                 bigquery.ScalarQueryParameter("flexibility_explanation", "STRING", application_data.get('flexibility_explanation', '')),
                 bigquery.ScalarQueryParameter("sabbatical_purpose", "STRING", application_data.get('sabbatical_purpose', '')),
@@ -533,8 +558,11 @@ def submit_application():
             'submitted_at': submitted_at,
             'employee_name': data.get('employee_name', ''),
             'employee_email': data.get('employee_email', '').lower(),
+            'employee_location': data.get('employee_location', ''),
             'sabbatical_option': data.get('sabbatical_option', ''),
             'preferred_dates': data.get('preferred_dates', ''),
+            'start_date': data.get('start_date', ''),
+            'end_date': data.get('end_date', ''),
             'date_flexibility': data.get('date_flexibility', ''),
             'flexibility_explanation': data.get('flexibility_explanation', ''),
             'sabbatical_purpose': data.get('sabbatical_purpose', ''),
@@ -677,6 +705,105 @@ def lookup_staff():
 def get_options():
     """Get sabbatical options."""
     return jsonify({'options': list(SABBATICAL_OPTIONS.keys())})
+
+
+# ============ Conflict Check & Calendar ============
+
+@app.route('/api/conflicts/check', methods=['GET'])
+def check_conflicts():
+    """Check for sabbatical conflicts at a location during date range."""
+    location = request.args.get('location', '').strip()
+    start_date = request.args.get('start_date', '')
+    end_date = request.args.get('end_date', '')
+
+    if not location or not start_date or not end_date:
+        return jsonify({'error': 'Location and dates required'}), 400
+
+    all_applications = read_all_applications()
+
+    # Filter to approved/pending applications at the same location with overlapping dates
+    conflicts = []
+    for app in all_applications:
+        # Only check approved or under review applications
+        if app.get('status') not in ['Approved', 'Under Review', 'Submitted']:
+            continue
+
+        # Check if same location
+        if app.get('employee_location', '').lower() != location.lower():
+            continue
+
+        # Check for date overlap
+        app_start = app.get('start_date', '')
+        app_end = app.get('end_date', '')
+
+        if app_start and app_end and start_date and end_date:
+            # Check if date ranges overlap
+            if not (end_date < app_start or start_date > app_end):
+                conflicts.append({
+                    'employee_name': app.get('employee_name'),
+                    'status': app.get('status'),
+                    'start_date': app_start,
+                    'end_date': app_end,
+                    'preferred_dates': app.get('preferred_dates')
+                })
+
+    conflict_count = len(conflicts)
+
+    if conflict_count == 0:
+        return jsonify({
+            'conflicts': [],
+            'count': 0,
+            'status': 'ok',
+            'message': 'No conflicts found. You would be the first at this location during this time.'
+        })
+    elif conflict_count == 1:
+        return jsonify({
+            'conflicts': conflicts,
+            'count': 1,
+            'status': 'warning',
+            'message': f'There is already 1 sabbatical scheduled at {location} during this time. We recommend only 1 per location, but 2 is allowed.'
+        })
+    else:
+        return jsonify({
+            'conflicts': conflicts,
+            'count': conflict_count,
+            'status': 'blocked',
+            'message': f'There are already {conflict_count} sabbaticals scheduled at {location} during this time. Maximum of 2 per location is allowed.'
+        })
+
+
+@app.route('/api/calendar', methods=['GET'])
+def get_calendar_data():
+    """Get sabbatical data for calendar view."""
+    all_applications = read_all_applications()
+
+    # Filter to applications with dates that are approved, under review, or submitted
+    calendar_data = []
+    for app in all_applications:
+        if app.get('status') in ['Approved', 'Under Review', 'Submitted']:
+            calendar_data.append({
+                'application_id': app.get('application_id'),
+                'employee_name': app.get('employee_name'),
+                'employee_location': app.get('employee_location'),
+                'sabbatical_option': app.get('sabbatical_option'),
+                'start_date': app.get('start_date'),
+                'end_date': app.get('end_date'),
+                'preferred_dates': app.get('preferred_dates'),
+                'status': app.get('status')
+            })
+
+    # Also group by location for summary
+    by_location = {}
+    for app in calendar_data:
+        loc = app.get('employee_location') or 'Unknown'
+        if loc not in by_location:
+            by_location[loc] = []
+        by_location[loc].append(app)
+
+    return jsonify({
+        'applications': calendar_data,
+        'by_location': by_location
+    })
 
 
 # ============ Auth Routes ============
