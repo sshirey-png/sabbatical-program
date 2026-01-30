@@ -333,29 +333,63 @@ def ensure_table_exists():
 
 def row_to_dict(row):
     """Convert a BigQuery row to a dictionary."""
+    # Handle both old and new column names
+    leave_weeks = getattr(row, 'leave_weeks', None) or 8
+    salary_pct = getattr(row, 'salary_percentage', None) or 100
+    sabbatical_option = getattr(row, 'sabbatical_option', None) or f"{leave_weeks} Weeks - {salary_pct}% Salary"
+
+    # Get start/end dates (handle both column name formats)
+    start_date = getattr(row, 'start_date', None) or getattr(row, 'requested_start_date', None)
+    end_date = getattr(row, 'end_date', None) or getattr(row, 'requested_end_date', None)
+
+    # Get flexibility info
+    is_flexible = getattr(row, 'flexible', None)
+    date_flexibility = getattr(row, 'date_flexibility', None)
+    if date_flexibility is None and is_flexible is not None:
+        date_flexibility = 'Yes' if is_flexible else 'No'
+
+    flexibility_explanation = getattr(row, 'flexibility_explanation', None) or getattr(row, 'flexibility_details', None) or ''
+
+    # Get manager discussion
+    manager_discussed = getattr(row, 'manager_discussed', None)
+    manager_discussion = getattr(row, 'manager_discussion', None)
+    if manager_discussion is None and manager_discussed is not None:
+        manager_discussion = 'Yes' if manager_discussed else 'No'
+
+    # Get location/site
+    location = getattr(row, 'employee_location', None) or getattr(row, 'site', None) or ''
+
+    # Get notes
+    additional_notes = getattr(row, 'additional_notes', None) or getattr(row, 'additional_comments', None) or ''
+
+    # Get status timestamp
+    status_updated_at = getattr(row, 'status_updated_at', None) or getattr(row, 'updated_at', None)
+
     return {
         'application_id': row.application_id,
         'submitted_at': row.submitted_at.isoformat() if row.submitted_at else '',
         'employee_name': row.employee_name or '',
         'employee_email': row.employee_email or '',
-        'employee_location': getattr(row, 'employee_location', '') or '',
-        'sabbatical_option': row.sabbatical_option or '',
-        'preferred_dates': row.preferred_dates or '',
-        'start_date': row.start_date.isoformat() if getattr(row, 'start_date', None) else '',
-        'end_date': row.end_date.isoformat() if getattr(row, 'end_date', None) else '',
-        'date_flexibility': row.date_flexibility or '',
-        'flexibility_explanation': row.flexibility_explanation or '',
-        'sabbatical_purpose': row.sabbatical_purpose or '',
-        'why_now': row.why_now or '',
-        'coverage_plan': row.coverage_plan or '',
-        'manager_discussion': row.manager_discussion or '',
-        'ack_one_year': row.ack_one_year if hasattr(row, 'ack_one_year') else False,
-        'ack_no_other_job': row.ack_no_other_job if hasattr(row, 'ack_no_other_job') else False,
-        'additional_notes': row.additional_notes or '',
+        'employee_location': location,
+        'sabbatical_option': sabbatical_option,
+        'leave_weeks': leave_weeks,
+        'salary_percentage': salary_pct,
+        'preferred_dates': getattr(row, 'preferred_dates', None) or '',
+        'start_date': start_date.isoformat() if start_date else '',
+        'end_date': end_date.isoformat() if end_date else '',
+        'date_flexibility': date_flexibility or '',
+        'flexibility_explanation': flexibility_explanation,
+        'sabbatical_purpose': getattr(row, 'sabbatical_purpose', None) or '',
+        'why_now': getattr(row, 'why_now', None) or '',
+        'coverage_plan': getattr(row, 'coverage_plan', None) or '',
+        'manager_discussion': manager_discussion or '',
+        'ack_one_year': getattr(row, 'ack_one_year', False),
+        'ack_no_other_job': getattr(row, 'ack_no_other_job', False),
+        'additional_notes': additional_notes,
         'status': row.status or '',
-        'status_updated_at': row.status_updated_at.isoformat() if row.status_updated_at else '',
-        'status_updated_by': row.status_updated_by or '',
-        'admin_notes': row.admin_notes or ''
+        'status_updated_at': status_updated_at.isoformat() if status_updated_at else '',
+        'status_updated_by': getattr(row, 'status_updated_by', None) or '',
+        'admin_notes': getattr(row, 'admin_notes', None) or ''
     }
 
 
