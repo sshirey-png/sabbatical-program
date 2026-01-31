@@ -43,6 +43,8 @@ SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 587
 TALENT_TEAM_EMAIL = 'talent@firstlineschools.org'
 HR_EMAIL = 'hr@firstlineschools.org'
+BENEFITS_EMAIL = 'benefits@firstlineschools.org'
+PAYROLL_EMAIL = 'payroll@firstlineschools.org'
 
 # Admin users who can access the admin panel
 ADMIN_USERS = [
@@ -58,7 +60,8 @@ ADMIN_USERS = [
 # Status values and their display order
 STATUS_VALUES = [
     'Submitted',
-    'Under Review',
+    'Tentatively Approved',
+    'Plan Submitted',
     'Approved',
     'Completed',
     'Denied',
@@ -141,7 +144,8 @@ def send_application_confirmation(application):
             <div style="background-color: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
                 <p style="margin: 5px 0;"><strong>Application ID:</strong> {application['application_id']}</p>
                 <p style="margin: 5px 0;"><strong>Option:</strong> {weeks} weeks at {salary_pct}% salary</p>
-                <p style="margin: 5px 0;"><strong>Preferred Dates:</strong> {application['preferred_dates']}</p>
+                <p style="margin: 5px 0;"><strong>Start Date:</strong> {application.get('start_date') or 'TBD'}</p>
+                <p style="margin: 5px 0;"><strong>End Date:</strong> {application.get('end_date') or 'TBD'}</p>
             </div>
 
             <p><strong>What's next?</strong></p>
@@ -151,7 +155,12 @@ def send_application_confirmation(application):
                 <li>You'll receive an email once a decision has been made</li>
             </ul>
 
-            <p>You can check your application status anytime at the Sabbatical Program portal.</p>
+            <div style="background-color: #e47727; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+                <a href="https://sabbatical-program-965913991496.us-central1.run.app/"
+                   style="color: white; text-decoration: none; font-weight: bold;">
+                    Check Your Application Status
+                </a>
+            </div>
 
             <p style="color: #666; font-size: 0.9em; margin-top: 30px;">Questions? Contact talent@firstlineschools.org</p>
         </div>
@@ -187,7 +196,8 @@ def send_new_application_alert(application):
             <div style="background-color: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
                 <h3 style="color: #002f60; margin-top: 0;">Sabbatical Details</h3>
                 <p style="margin: 5px 0;"><strong>Option:</strong> {weeks} weeks at {salary_pct}% salary</p>
-                <p style="margin: 5px 0;"><strong>Preferred Dates:</strong> {application['preferred_dates']}</p>
+                <p style="margin: 5px 0;"><strong>Start Date:</strong> {application.get('start_date') or 'TBD'}</p>
+                <p style="margin: 5px 0;"><strong>End Date:</strong> {application.get('end_date') or 'TBD'}</p>
                 <p style="margin: 5px 0;"><strong>Date Flexibility:</strong> {application['date_flexibility']}</p>
                 {f"<p style='margin: 5px 0;'><strong>Flexibility Details:</strong> {application['flexibility_explanation']}</p>" if application.get('flexibility_explanation') else ""}
                 <p style="margin: 5px 0;"><strong>Manager Discussion:</strong> {application['manager_discussion']}</p>
@@ -220,8 +230,8 @@ def send_new_application_alert(application):
 def send_status_update(application, old_status, new_status, updated_by, notes=''):
     """Send status update email to applicant."""
     status_messages = {
-        'Under Review': "Your sabbatical application is now being reviewed by our team.",
-        'Approved': "Congratulations! Your sabbatical application has been APPROVED! We'll be in touch with next steps.",
+        'Tentatively Approved': "Great news! Your sabbatical application has been TENTATIVELY APPROVED! Please complete your planning checklist to receive final approval.",
+        'Approved': "Congratulations! Your sabbatical application has received FINAL APPROVAL! Your sabbatical dates are now confirmed.",
         'Denied': f"After careful consideration, we are unable to approve your sabbatical request at this time.{' Notes: ' + notes if notes else ''}",
         'Withdrawn': "Your sabbatical application has been withdrawn as requested."
     }
@@ -231,12 +241,40 @@ def send_status_update(application, old_status, new_status, updated_by, notes=''
     # Choose color based on status
     if new_status == 'Approved':
         status_color = '#22c55e'  # Green
+    elif new_status == 'Tentatively Approved':
+        status_color = '#6B46C1'  # Purple
     elif new_status in ['Denied', 'Withdrawn']:
         status_color = '#ef4444'  # Red
     else:
         status_color = '#e47727'  # Orange
 
     subject = f"Sabbatical Application Update - {new_status}"
+    # Add planning page link for tentatively approved applications
+    planning_link = ""
+    if new_status == 'Tentatively Approved':
+        planning_link = f"""
+            <div style="background-color: #6B46C1; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <p style="color: white; margin: 0 0 15px 0; font-size: 1.1em;">Start planning your sabbatical now!</p>
+                <a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical"
+                   style="display: inline-block; background-color: #D4AF37; color: #002f60; padding: 12px 30px;
+                          text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    Go to My Sabbatical Planning Page
+                </a>
+                <p style="color: #ddd; margin: 15px 0 0 0; font-size: 0.9em;">Complete your planning checklist to receive final approval.</p>
+            </div>
+        """
+    elif new_status == 'Approved':
+        planning_link = f"""
+            <div style="background-color: #22c55e; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <p style="color: white; margin: 0 0 15px 0; font-size: 1.1em;">Your sabbatical is confirmed!</p>
+                <a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical"
+                   style="display: inline-block; background-color: white; color: #22c55e; padding: 12px 30px;
+                          text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    View My Sabbatical Details
+                </a>
+            </div>
+        """
+
     html_body = f"""
     <div style="font-family: 'Open Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #002f60; padding: 20px; text-align: center;">
@@ -252,9 +290,11 @@ def send_status_update(application, old_status, new_status, updated_by, notes=''
 
             <p>{message}</p>
 
+            {planning_link}
+
             <div style="background-color: white; border-radius: 8px; padding: 15px; margin: 20px 0;">
                 <p style="margin: 5px 0;"><strong>Application ID:</strong> {application['application_id']}</p>
-                <p style="margin: 5px 0;"><strong>Preferred Dates:</strong> {application['preferred_dates']}</p>
+                <p style="margin: 5px 0;"><strong>Preferred Dates:</strong> {application.get('start_date', '')} - {application.get('end_date', '')}</p>
             </div>
 
             <p style="color: #666; font-size: 0.9em; margin-top: 30px;">Questions? Contact talent@firstlineschools.org</p>
@@ -265,6 +305,100 @@ def send_status_update(application, old_status, new_status, updated_by, notes=''
     </div>
     """
     send_email(application['employee_email'], subject, html_body)
+
+
+# ============ Supervisor Chain Functions ============
+
+def get_supervisor_chain(employee_email):
+    """
+    Get the supervisor chain for an employee, going up to CEO.
+    Returns list of dicts with supervisor name, email, and level.
+    """
+    try:
+        query = """
+        WITH RECURSIVE supervisor_chain AS (
+            -- Base case: the employee
+            SELECT
+                Email_Address as email,
+                CONCAT(First_Name, ' ', Last_Name) as name,
+                Supervisor_Name__Unsecured_ as supervisor_name,
+                0 as level
+            FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+            WHERE LOWER(Email_Address) = LOWER(@employee_email)
+            AND Employment_Status IN ('Active', 'Leave of absence')
+
+            UNION ALL
+
+            -- Recursive case: find the supervisor's supervisor
+            SELECT
+                s.Email_Address as email,
+                CONCAT(s.First_Name, ' ', s.Last_Name) as name,
+                s.Supervisor_Name__Unsecured_ as supervisor_name,
+                sc.level + 1 as level
+            FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function` s
+            INNER JOIN supervisor_chain sc
+                ON s.Employee_Name__Last_Suffix__First_MI_ = sc.supervisor_name
+            WHERE s.Employment_Status IN ('Active', 'Leave of absence')
+            AND sc.level < 10  -- Safety limit
+        )
+        SELECT DISTINCT email, name, supervisor_name, level
+        FROM supervisor_chain
+        WHERE level > 0  -- Exclude the employee themselves
+        ORDER BY level
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("employee_email", "STRING", employee_email)
+            ]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+        chain = []
+        for row in results:
+            chain.append({
+                'email': row.email,
+                'name': row.name,
+                'level': row.level
+            })
+        return chain
+    except Exception as e:
+        logger.error(f"Error getting supervisor chain: {e}")
+        return []
+
+
+def get_required_approvers(employee_email):
+    """
+    Get list of all required approvers for final approval.
+    Includes: supervisor chain + Talent + HR
+    """
+    approvers = []
+
+    # Get supervisor chain
+    chain = get_supervisor_chain(employee_email)
+    for supervisor in chain:
+        approvers.append({
+            'email': supervisor['email'],
+            'name': supervisor['name'],
+            'role': f"Manager (Level {supervisor['level']})",
+            'type': 'manager'
+        })
+
+    # Add Talent (sshirey handles Talent approvals)
+    approvers.append({
+        'email': 'sshirey@firstlineschools.org',
+        'name': 'Talent Team',
+        'role': 'Talent',
+        'type': 'talent'
+    })
+
+    # Add HR (brichardson handles HR approvals)
+    approvers.append({
+        'email': 'brichardson@firstlineschools.org',
+        'name': 'HR Team',
+        'role': 'HR',
+        'type': 'hr'
+    })
+
+    return approvers
 
 
 # ============ BigQuery Functions ============
@@ -436,24 +570,28 @@ def append_application(application_data):
 
         query = f"""
         INSERT INTO `{get_full_table_id()}` (
-            application_id, submitted_at, employee_name, employee_email, employee_location,
-            sabbatical_option, preferred_dates, start_date, end_date,
-            date_flexibility, flexibility_explanation,
-            sabbatical_purpose, why_now, coverage_plan, manager_discussion,
-            ack_one_year, ack_no_other_job, additional_notes,
-            status, status_updated_at, status_updated_by, admin_notes
+            application_id, submitted_at, employee_name, employee_email, site,
+            leave_weeks, salary_percentage, start_date, end_date,
+            flexible, flexibility_details,
+            sabbatical_purpose, why_now, coverage_plan, manager_discussed,
+            additional_comments, status, created_at, updated_at
         ) VALUES (
-            @application_id, @submitted_at, @employee_name, @employee_email, @employee_location,
-            @sabbatical_option, @preferred_dates, @start_date, @end_date,
-            @date_flexibility, @flexibility_explanation,
-            @sabbatical_purpose, @why_now, @coverage_plan, @manager_discussion,
-            @ack_one_year, @ack_no_other_job, @additional_notes,
-            @status, @status_updated_at, @status_updated_by, @admin_notes
+            @application_id, @submitted_at, @employee_name, @employee_email, @site,
+            @leave_weeks, @salary_percentage, @start_date, @end_date,
+            @flexible, @flexibility_details,
+            @sabbatical_purpose, @why_now, @coverage_plan, @manager_discussed,
+            @additional_comments, @status, @created_at, @updated_at
         )
         """
 
         submitted_at = datetime.fromisoformat(application_data['submitted_at']) if application_data.get('submitted_at') else datetime.now()
-        status_updated_at = datetime.fromisoformat(application_data['status_updated_at']) if application_data.get('status_updated_at') else datetime.now()
+        now = datetime.now()
+
+        # Parse sabbatical_option to get weeks and salary percentage
+        sabbatical_option = application_data.get('sabbatical_option', '')
+        option_info = SABBATICAL_OPTIONS.get(sabbatical_option, {'weeks': 8, 'salary_pct': 100})
+        leave_weeks = option_info['weeks']
+        salary_percentage = option_info['salary_pct']
 
         # Parse start and end dates if provided
         start_date = None
@@ -469,30 +607,35 @@ def append_application(application_data):
             except:
                 pass
 
+        # Convert flexibility to boolean
+        flexibility_value = application_data.get('date_flexibility', '')
+        flexible = flexibility_value.lower() == 'yes' if isinstance(flexibility_value, str) else bool(flexibility_value)
+
+        # Convert manager discussion to boolean
+        manager_value = application_data.get('manager_discussion', '')
+        manager_discussed = manager_value.lower() == 'yes' if isinstance(manager_value, str) else bool(manager_value)
+
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("application_id", "STRING", application_data.get('application_id', '')),
                 bigquery.ScalarQueryParameter("submitted_at", "TIMESTAMP", submitted_at),
                 bigquery.ScalarQueryParameter("employee_name", "STRING", application_data.get('employee_name', '')),
                 bigquery.ScalarQueryParameter("employee_email", "STRING", application_data.get('employee_email', '')),
-                bigquery.ScalarQueryParameter("employee_location", "STRING", application_data.get('employee_location', '')),
-                bigquery.ScalarQueryParameter("sabbatical_option", "STRING", application_data.get('sabbatical_option', '')),
-                bigquery.ScalarQueryParameter("preferred_dates", "STRING", application_data.get('preferred_dates', '')),
+                bigquery.ScalarQueryParameter("site", "STRING", application_data.get('employee_location', '')),
+                bigquery.ScalarQueryParameter("leave_weeks", "INT64", leave_weeks),
+                bigquery.ScalarQueryParameter("salary_percentage", "INT64", salary_percentage),
                 bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
                 bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
-                bigquery.ScalarQueryParameter("date_flexibility", "STRING", application_data.get('date_flexibility', '')),
-                bigquery.ScalarQueryParameter("flexibility_explanation", "STRING", application_data.get('flexibility_explanation', '')),
+                bigquery.ScalarQueryParameter("flexible", "BOOL", flexible),
+                bigquery.ScalarQueryParameter("flexibility_details", "STRING", application_data.get('flexibility_explanation', '')),
                 bigquery.ScalarQueryParameter("sabbatical_purpose", "STRING", application_data.get('sabbatical_purpose', '')),
                 bigquery.ScalarQueryParameter("why_now", "STRING", application_data.get('why_now', '')),
                 bigquery.ScalarQueryParameter("coverage_plan", "STRING", application_data.get('coverage_plan', '')),
-                bigquery.ScalarQueryParameter("manager_discussion", "STRING", application_data.get('manager_discussion', '')),
-                bigquery.ScalarQueryParameter("ack_one_year", "BOOL", application_data.get('ack_one_year', False)),
-                bigquery.ScalarQueryParameter("ack_no_other_job", "BOOL", application_data.get('ack_no_other_job', False)),
-                bigquery.ScalarQueryParameter("additional_notes", "STRING", application_data.get('additional_notes', '')),
+                bigquery.ScalarQueryParameter("manager_discussed", "BOOL", manager_discussed),
+                bigquery.ScalarQueryParameter("additional_comments", "STRING", application_data.get('additional_notes', '')),
                 bigquery.ScalarQueryParameter("status", "STRING", application_data.get('status', 'Submitted')),
-                bigquery.ScalarQueryParameter("status_updated_at", "TIMESTAMP", status_updated_at),
-                bigquery.ScalarQueryParameter("status_updated_by", "STRING", application_data.get('status_updated_by', '')),
-                bigquery.ScalarQueryParameter("admin_notes", "STRING", application_data.get('admin_notes', '')),
+                bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", now),
+                bigquery.ScalarQueryParameter("updated_at", "TIMESTAMP", now),
             ]
         )
 
@@ -509,17 +652,32 @@ def update_application(application_id, updates):
         set_clauses = []
         params = [bigquery.ScalarQueryParameter("application_id", "STRING", application_id)]
 
-        for field, value in updates.items():
-            param_name = f"param_{field}"
+        # Map old field names to actual table columns
+        field_mapping = {
+            'status_updated_at': 'updated_at',
+            'status_updated_by': None,  # Column doesn't exist, skip
+            'admin_notes': None,  # Column doesn't exist, skip
+        }
 
-            if field == 'status_updated_at':
-                set_clauses.append(f"{field} = @{param_name}")
-                params.append(bigquery.ScalarQueryParameter(param_name, "TIMESTAMP", datetime.fromisoformat(value)))
-            elif field in ['ack_one_year', 'ack_no_other_job']:
-                set_clauses.append(f"{field} = @{param_name}")
+        for field, value in updates.items():
+            # Apply field mapping
+            actual_field = field_mapping.get(field, field)
+            if actual_field is None:
+                continue  # Skip fields that don't exist in table
+
+            param_name = f"param_{actual_field}"
+
+            if actual_field == 'updated_at':
+                set_clauses.append(f"{actual_field} = @{param_name}")
+                if isinstance(value, str):
+                    params.append(bigquery.ScalarQueryParameter(param_name, "TIMESTAMP", datetime.fromisoformat(value)))
+                else:
+                    params.append(bigquery.ScalarQueryParameter(param_name, "TIMESTAMP", value))
+            elif actual_field in ['flexible', 'manager_discussed']:
+                set_clauses.append(f"{actual_field} = @{param_name}")
                 params.append(bigquery.ScalarQueryParameter(param_name, "BOOL", bool(value)))
             else:
-                set_clauses.append(f"{field} = @{param_name}")
+                set_clauses.append(f"{actual_field} = @{param_name}")
                 params.append(bigquery.ScalarQueryParameter(param_name, "STRING", str(value)))
 
         if not set_clauses:
@@ -571,7 +729,7 @@ def submit_application():
 
         # Validate required fields
         required_fields = ['employee_name', 'employee_email', 'sabbatical_option',
-                          'preferred_dates', 'date_flexibility', 'sabbatical_purpose',
+                          'date_flexibility', 'sabbatical_purpose',
                           'why_now', 'coverage_plan', 'manager_discussion',
                           'ack_one_year', 'ack_no_other_job']
 
@@ -695,7 +853,9 @@ def lookup_staff():
             years = row.years_of_service or 0
 
             # Calculate eligibility (10+ years required)
-            is_eligible = years >= 10
+            # Test override for system testing
+            TEST_ELIGIBLE_EMAILS = ['sshirey@firstlineschools.org']
+            is_eligible = years >= 10 or email in TEST_ELIGIBLE_EMAILS
 
             # Format hire date
             hire_date = row.Last_Hire_Date.strftime('%B %d, %Y') if row.Last_Hire_Date else 'Unknown'
@@ -759,8 +919,8 @@ def check_conflicts():
     # Filter to approved/pending applications at the same location with overlapping dates
     conflicts = []
     for app in all_applications:
-        # Only check approved or under review applications
-        if app.get('status') not in ['Approved', 'Under Review', 'Submitted']:
+        # Only check approved or in-progress applications
+        if app.get('status') not in ['Approved', 'Tentatively Approved', 'Plan Submitted', 'Submitted']:
             continue
 
         # Check if same location
@@ -812,10 +972,10 @@ def get_calendar_data():
     """Get sabbatical data for calendar view."""
     all_applications = read_all_applications()
 
-    # Filter to applications with dates that are approved, under review, or submitted
+    # Filter to applications with dates that are approved or in-progress
     calendar_data = []
     for app in all_applications:
-        if app.get('status') in ['Approved', 'Under Review', 'Submitted']:
+        if app.get('status') in ['Approved', 'Tentatively Approved', 'Plan Submitted', 'Submitted']:
             calendar_data.append({
                 'application_id': app.get('application_id'),
                 'employee_name': app.get('employee_name'),
@@ -990,14 +1150,86 @@ def my_sabbatical_page():
     return send_file(os.path.join(SCRIPT_DIR, 'my-sabbatical.html'))
 
 
-@app.route('/api/my-sabbatical', methods=['GET'])
-def get_my_sabbatical():
-    """Get sabbatical data for the logged-in user."""
+@app.route('/approvals')
+def approvals_page():
+    """Serve the Approvals page."""
+    return send_file(os.path.join(SCRIPT_DIR, 'approvals.html'))
+
+
+@app.route('/api/my-approvals', methods=['GET'])
+def get_my_approvals():
+    """Get pending approvals for the current user."""
     user = session.get('user')
     if not user:
         return jsonify({'error': 'Authentication required'}), 401
 
-    email = user.get('email', '').lower()
+    user_email = user.get('email', '').lower()
+
+    try:
+        # Query pending approvals for this user
+        approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
+
+        # Check if table exists
+        try:
+            bq_client.get_table(approvals_table)
+        except:
+            return jsonify({'approvals': []})
+
+        query = f"""
+        SELECT pa.*, a.employee_name, a.employee_email, a.start_date, a.end_date, a.sabbatical_option
+        FROM `{approvals_table}` pa
+        JOIN `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}` a ON pa.application_id = a.application_id
+        WHERE LOWER(pa.approver_email) = @user_email
+        AND pa.status = 'Pending'
+        ORDER BY pa.created_at DESC
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("user_email", "STRING", user_email),
+            ]
+        )
+        results = list(bq_client.query(query, job_config=job_config).result())
+
+        approvals = []
+        for row in results:
+            approvals.append({
+                'id': row.id,
+                'application_id': row.application_id,
+                'employee_name': row.employee_name,
+                'employee_email': row.employee_email,
+                'start_date': row.start_date,
+                'end_date': row.end_date,
+                'sabbatical_option': row.sabbatical_option,
+                'approver_role': row.approver_role,
+                'approver_type': row.approver_type,
+                'status': row.status,
+                'created_at': row.created_at.isoformat() if row.created_at else None,
+            })
+
+        return jsonify({'approvals': approvals})
+    except Exception as e:
+        logger.error(f"Error getting approvals: {e}")
+        return jsonify({'error': 'Failed to get approvals'}), 500
+
+
+@app.route('/api/my-sabbatical', methods=['GET'])
+def get_my_sabbatical():
+    """Get sabbatical data for the logged-in user or specified employee (admin only)."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    # Check if admin is viewing another employee's sabbatical
+    requested_email = request.args.get('email', '').lower()
+    if requested_email and requested_email != user.get('email', '').lower():
+        # Verify user is admin
+        if not user.get('is_admin'):
+            return jsonify({'error': 'Admin access required to view other employees'}), 403
+        email = requested_email
+        viewing_as_admin = True
+    else:
+        email = user.get('email', '').lower()
+        viewing_as_admin = False
     ensure_my_sabbatical_tables()
 
     # Find approved/planning sabbatical for this user
@@ -1005,7 +1237,7 @@ def get_my_sabbatical():
     sabbatical = None
     for app in all_applications:
         if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+            if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 sabbatical = app
                 break
 
@@ -1117,7 +1349,8 @@ def get_my_sabbatical():
         'checklist': checklist,
         'coverage': coverage,
         'messages': messages,
-        'history': history
+        'history': history,
+        'viewing_as_admin': viewing_as_admin
     })
 
 
@@ -1133,15 +1366,18 @@ def update_checklist_item(task_id):
     role = data.get('role')
     checked = data.get('checked', False)
 
-    if role not in ['employee', 'manager', 'hr']:
+    if role not in ['employee', 'manager', 'hr', 'completed']:
         return jsonify({'error': 'Invalid role'}), 400
+
+    # Map 'completed' to 'employee' for database storage (simplified single checkbox)
+    db_role = 'employee' if role == 'completed' else role
 
     # Find user's sabbatical
     all_applications = read_all_applications()
     application_id = None
     for app in all_applications:
         if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+            if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 break
 
@@ -1175,15 +1411,15 @@ def update_checklist_item(task_id):
             # Update existing
             update_query = f"""
             UPDATE `{checklist_table}`
-            SET {role}_done = @checked,
-                {role}_done_at = @done_at,
-                {role}_done_by = @done_by
+            SET {db_role}_done = @checked,
+                {db_role}_done_at = @done_at,
+                {db_role}_done_by = @done_by
             WHERE application_id = @application_id AND task_id = @task_id
             """
         else:
             # Insert new
             update_query = f"""
-            INSERT INTO `{checklist_table}` (id, application_id, task_id, {role}_done, {role}_done_at, {role}_done_by)
+            INSERT INTO `{checklist_table}` (id, application_id, task_id, {db_role}_done, {db_role}_done_at, {db_role}_done_by)
             VALUES (@id, @application_id, @task_id, @checked, @done_at, @done_by)
             """
 
@@ -1228,7 +1464,7 @@ def add_checklist_note(task_id):
     application_id = None
     for app in all_applications:
         if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+            if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 break
 
@@ -1320,7 +1556,7 @@ def add_coverage():
     application_id = None
     for app in all_applications:
         if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+            if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 break
 
@@ -1360,6 +1596,60 @@ def add_coverage():
         return jsonify({'error': 'Failed to add coverage'}), 500
 
 
+@app.route('/api/my-sabbatical/coverage/<coverage_id>', methods=['PATCH'])
+def update_coverage(coverage_id):
+    """Update a coverage assignment."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.json
+
+    try:
+        coverage_table = f"{PROJECT_ID}.{DATASET_ID}.coverage_assignments"
+
+        # Build update query
+        set_clauses = ["updated_at = @updated_at"]
+        params = [
+            bigquery.ScalarQueryParameter("coverage_id", "STRING", coverage_id),
+            bigquery.ScalarQueryParameter("updated_at", "TIMESTAMP", datetime.now()),
+        ]
+
+        if 'status' in data:
+            set_clauses.append("status = @status")
+            params.append(bigquery.ScalarQueryParameter("status", "STRING", data['status']))
+
+        if 'responsibility' in data:
+            set_clauses.append("responsibility = @responsibility")
+            params.append(bigquery.ScalarQueryParameter("responsibility", "STRING", data['responsibility']))
+
+        if 'covered_by' in data:
+            set_clauses.append("covered_by = @covered_by")
+            params.append(bigquery.ScalarQueryParameter("covered_by", "STRING", data['covered_by']))
+
+        if 'email' in data:
+            set_clauses.append("email = @email")
+            params.append(bigquery.ScalarQueryParameter("email", "STRING", data['email']))
+
+        if 'notes' in data:
+            set_clauses.append("notes = @notes")
+            params.append(bigquery.ScalarQueryParameter("notes", "STRING", data['notes']))
+
+        query = f"""
+        UPDATE `{coverage_table}`
+        SET {', '.join(set_clauses)}
+        WHERE id = @coverage_id
+        """
+
+        job_config = bigquery.QueryJobConfig(query_parameters=params)
+        bq_client.query(query, job_config=job_config).result()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error updating coverage: {e}")
+        return jsonify({'error': 'Failed to update coverage'}), 500
+
+
 @app.route('/api/my-sabbatical/messages', methods=['POST'])
 def send_sabbatical_message():
     """Send a message about a sabbatical."""
@@ -1376,7 +1666,7 @@ def send_sabbatical_message():
     sabbatical = None
     for app in all_applications:
         if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+            if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 sabbatical = app
                 break
@@ -1456,7 +1746,7 @@ def request_date_change():
     sabbatical = None
     for app in all_applications:
         if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Approved', 'Planning', 'Confirmed']:
+            if app.get('status') in ['Tentatively Approved', 'Approved', 'Planning', 'Confirmed']:
                 application_id = app['application_id']
                 sabbatical = app
                 break
@@ -1536,6 +1826,483 @@ def request_date_change():
     except Exception as e:
         logger.error(f"Error requesting date change: {e}")
         return jsonify({'error': 'Failed to submit request'}), 500
+
+
+@app.route('/api/my-sabbatical/submit-plan', methods=['POST'])
+def submit_plan_for_approval():
+    """Submit sabbatical plan for final approval."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    email = user.get('email', '').lower()
+
+    # Find user's sabbatical
+    all_applications = read_all_applications()
+    sabbatical = None
+    for app in all_applications:
+        if app.get('employee_email', '').lower() == email:
+            if app.get('status') == 'Tentatively Approved':
+                sabbatical = app
+                break
+
+    if not sabbatical:
+        return jsonify({'error': 'No tentatively approved sabbatical found'}), 404
+
+    application_id = sabbatical['application_id']
+
+    try:
+        # Get required approvers
+        approvers = get_required_approvers(email)
+
+        # Create plan_approvals table entry for tracking
+        approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
+
+        # Ensure table exists (create if needed)
+        try:
+            bq_client.get_table(approvals_table)
+        except:
+            schema = [
+                bigquery.SchemaField("id", "STRING"),
+                bigquery.SchemaField("application_id", "STRING"),
+                bigquery.SchemaField("approver_email", "STRING"),
+                bigquery.SchemaField("approver_name", "STRING"),
+                bigquery.SchemaField("approver_role", "STRING"),
+                bigquery.SchemaField("approver_type", "STRING"),
+                bigquery.SchemaField("status", "STRING"),
+                bigquery.SchemaField("approved_at", "TIMESTAMP"),
+                bigquery.SchemaField("notes", "STRING"),
+                bigquery.SchemaField("created_at", "TIMESTAMP"),
+            ]
+            table = bigquery.Table(approvals_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {approvals_table}")
+
+        # Check if approvals already exist for this application (prevent duplicates)
+        existing_query = f"""
+        SELECT COUNT(*) as cnt FROM `{approvals_table}`
+        WHERE application_id = @application_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+            ]
+        )
+        existing = list(bq_client.query(existing_query, job_config=job_config).result())[0].cnt
+        if existing > 0:
+            return jsonify({'error': 'Plan has already been submitted for approval'}), 400
+
+        # Insert approval records for each approver
+        for approver in approvers:
+            approval_id = str(uuid.uuid4())[:8]
+            query = f"""
+            INSERT INTO `{approvals_table}` (id, application_id, approver_email, approver_name, approver_role, approver_type, status, created_at)
+            VALUES (@id, @application_id, @approver_email, @approver_name, @approver_role, @approver_type, 'Pending', @created_at)
+            """
+            job_config = bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ScalarQueryParameter("id", "STRING", approval_id),
+                    bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                    bigquery.ScalarQueryParameter("approver_email", "STRING", approver['email']),
+                    bigquery.ScalarQueryParameter("approver_name", "STRING", approver['name']),
+                    bigquery.ScalarQueryParameter("approver_role", "STRING", approver['role']),
+                    bigquery.ScalarQueryParameter("approver_type", "STRING", approver['type']),
+                    bigquery.ScalarQueryParameter("created_at", "TIMESTAMP", datetime.now()),
+                ]
+            )
+            bq_client.query(query, job_config=job_config).result()
+
+        # Update application status to "Plan Submitted"
+        update_application(application_id, {'status': 'Plan Submitted'})
+
+        # Send notification to all approvers
+        approver_list = ', '.join([a['name'] for a in approvers])
+        subject = f"Sabbatical Plan Approval Required - {sabbatical.get('employee_name', '')}"
+        for approver in approvers:
+            html_body = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                <div style="background-color: #6B46C1; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Sabbatical Plan Approval</h1>
+                </div>
+                <div style="padding: 20px; background-color: #f8f9fa;">
+                    <p>Hi {approver['name']},</p>
+                    <p><strong>{sabbatical.get('employee_name', '')}</strong> has submitted their sabbatical plan for final approval.</p>
+
+                    <div style="background-color: white; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Employee:</strong> {sabbatical.get('employee_name', '')}</p>
+                        <p style="margin: 5px 0;"><strong>Dates:</strong> {sabbatical.get('start_date', 'TBD')} - {sabbatical.get('end_date', 'TBD')}</p>
+                        <p style="margin: 5px 0;"><strong>Your Role:</strong> {approver['role']}</p>
+                    </div>
+
+                    <p>Please review the plan and provide your approval.</p>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical?email={email}"
+                           style="display: inline-block; background-color: #6B46C1; color: white; padding: 12px 30px;
+                                  text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Review & Approve Plan
+                        </a>
+                    </div>
+
+                    <p style="color: #666; font-size: 0.9em;">Other approvers: {approver_list}</p>
+                </div>
+            </div>
+            """
+            send_email(approver['email'], subject, html_body)
+
+        # Add activity
+        add_activity(application_id, email, user.get('name', ''), 'plan_submitted',
+                    f"Plan submitted for final approval. Awaiting: {approver_list}")
+
+        return jsonify({'success': True, 'approvers': approvers})
+    except Exception as e:
+        logger.error(f"Error submitting plan: {e}")
+        return jsonify({'error': 'Failed to submit plan'}), 500
+
+
+@app.route('/api/my-sabbatical/approve-plan', methods=['POST'])
+def approve_plan():
+    """Approve a sabbatical plan (for managers, Talent, HR)."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    approver_email = user.get('email', '').lower()
+    data = request.json
+    application_id = data.get('application_id')
+    notes = data.get('notes', '')
+
+    if not application_id:
+        return jsonify({'error': 'Application ID required'}), 400
+
+    try:
+        approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
+
+        # Update this approver's record
+        query = f"""
+        UPDATE `{approvals_table}`
+        SET status = 'Approved', approved_at = @approved_at, notes = @notes
+        WHERE application_id = @application_id AND LOWER(approver_email) = LOWER(@approver_email)
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("approver_email", "STRING", approver_email),
+                bigquery.ScalarQueryParameter("approved_at", "TIMESTAMP", datetime.now()),
+                bigquery.ScalarQueryParameter("notes", "STRING", notes),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        # Check if all approvals are complete
+        check_query = f"""
+        SELECT
+            COUNT(*) as total,
+            COUNTIF(status = 'Approved') as approved
+        FROM `{approvals_table}`
+        WHERE application_id = @application_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id)
+            ]
+        )
+        results = list(bq_client.query(check_query, job_config=job_config).result())
+
+        if results:
+            total = results[0].total
+            approved = results[0].approved
+
+            # Get application details
+            sabbatical = get_application_by_id(application_id)
+
+            if approved == total and sabbatical:
+                # All approvals complete - grant final approval!
+                update_application(application_id, {'status': 'Approved'})
+
+                # Get all approvers for notification
+                approvers_query = f"""
+                SELECT approver_email, approver_name, approver_role
+                FROM `{approvals_table}`
+                WHERE application_id = @application_id
+                """
+                job_config = bigquery.QueryJobConfig(
+                    query_parameters=[
+                        bigquery.ScalarQueryParameter("application_id", "STRING", application_id)
+                    ]
+                )
+                approvers = list(bq_client.query(approvers_query, job_config=job_config).result())
+                approver_names = [a.approver_name for a in approvers]
+                approver_emails = [a.approver_email for a in approvers]
+
+                # Send final approval notification to everyone
+                all_recipients = approver_emails + [
+                    sabbatical.get('employee_email'),
+                    BENEFITS_EMAIL,
+                    PAYROLL_EMAIL
+                ]
+
+                subject = f"FINAL APPROVAL - Sabbatical for {sabbatical.get('employee_name', '')}"
+                html_body = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                    <div style="background-color: #22c55e; padding: 20px; text-align: center;">
+                        <h1 style="color: white; margin: 0;">Sabbatical FINAL APPROVAL</h1>
+                    </div>
+                    <div style="padding: 20px; background-color: #f8f9fa;">
+                        <p>Great news! The sabbatical for <strong>{sabbatical.get('employee_name', '')}</strong> has received final approval from all parties.</p>
+
+                        <div style="background-color: white; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                            <p style="margin: 5px 0;"><strong>Employee:</strong> {sabbatical.get('employee_name', '')}</p>
+                            <p style="margin: 5px 0;"><strong>Email:</strong> {sabbatical.get('employee_email', '')}</p>
+                            <p style="margin: 5px 0;"><strong>Dates:</strong> {sabbatical.get('start_date', 'TBD')} - {sabbatical.get('end_date', 'TBD')}</p>
+                            <p style="margin: 5px 0;"><strong>Duration:</strong> {sabbatical.get('leave_weeks', '?')} weeks</p>
+                            <p style="margin: 5px 0;"><strong>Salary:</strong> {sabbatical.get('salary_percentage', '?')}%</p>
+                        </div>
+
+                        <p><strong>Approved by:</strong></p>
+                        <ul>
+                            {''.join([f"<li>{name}</li>" for name in approver_names])}
+                        </ul>
+
+                        <p style="color: #666; font-size: 0.9em; margin-top: 20px;">
+                            This notification was sent to: Employee, Management Chain, Talent, HR, Benefits, and Payroll.
+                        </p>
+                    </div>
+                </div>
+                """
+
+                for recipient in all_recipients:
+                    if recipient:
+                        send_email(recipient, subject, html_body)
+
+                # Add activity
+                add_activity(application_id, approver_email, user.get('name', ''), 'final_approval',
+                            f"Final approval granted. All {total} approvers signed off.")
+
+                return jsonify({'success': True, 'final_approval': True, 'total': total, 'approved': approved})
+
+        # Add activity for this approval
+        add_activity(application_id, approver_email, user.get('name', ''), 'approval_given',
+                    f"{user.get('name', approver_email)} approved the plan")
+
+        return jsonify({'success': True, 'final_approval': False, 'total': total, 'approved': approved})
+    except Exception as e:
+        logger.error(f"Error approving plan: {e}")
+        return jsonify({'error': 'Failed to approve plan'}), 500
+
+
+@app.route('/api/my-sabbatical/request-changes', methods=['POST'])
+def request_changes():
+    """Request changes to a sabbatical plan (for approvers)."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json()
+    application_id = data.get('application_id')
+    comments = data.get('comments', '')
+
+    if not application_id:
+        return jsonify({'error': 'Application ID required'}), 400
+
+    approver_email = user.get('email', '').lower()
+
+    try:
+        approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
+
+        # Update this approver's record to "Changes Requested"
+        query = f"""
+        UPDATE `{approvals_table}`
+        SET status = 'Changes Requested', notes = @notes, approved_at = @now
+        WHERE application_id = @application_id
+        AND LOWER(approver_email) = @approver_email
+        AND status = 'Pending'
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+                bigquery.ScalarQueryParameter("approver_email", "STRING", approver_email),
+                bigquery.ScalarQueryParameter("notes", "STRING", comments),
+                bigquery.ScalarQueryParameter("now", "TIMESTAMP", datetime.now()),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        # Get application details
+        sabbatical = get_application_by_id(application_id)
+
+        # Notify the employee
+        if sabbatical:
+            subject = f"Changes Requested - Sabbatical Plan"
+            html_body = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                <div style="background-color: #eab308; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Changes Requested</h1>
+                </div>
+                <div style="padding: 20px; background-color: #f8f9fa;">
+                    <p>Hi {sabbatical.get('employee_name', '')},</p>
+                    <p><strong>{user.get('name', approver_email)}</strong> has requested changes to your sabbatical plan.</p>
+
+                    <div style="background-color: white; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Reviewer:</strong> {user.get('name', approver_email)}</p>
+                        <p style="margin: 5px 0;"><strong>Comments:</strong></p>
+                        <p style="margin: 5px 0; font-style: italic; color: #666;">"{comments}"</p>
+                    </div>
+
+                    <p>Please review the feedback and update your plan, then resubmit for approval.</p>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical"
+                           style="display: inline-block; background-color: #6B46C1; color: white; padding: 12px 30px;
+                                  text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            View Your Plan
+                        </a>
+                    </div>
+                </div>
+            </div>
+            """
+            send_email(sabbatical.get('employee_email'), subject, html_body)
+
+            # Add activity
+            add_activity(application_id, approver_email, user.get('name', ''), 'changes_requested',
+                        f"{user.get('name', approver_email)} requested changes: {comments}")
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error requesting changes: {e}")
+        return jsonify({'error': 'Failed to request changes'}), 500
+
+
+@app.route('/api/my-sabbatical/resubmit-plan', methods=['POST'])
+def resubmit_plan():
+    """Resubmit sabbatical plan after making changes."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json()
+    application_id = data.get('application_id')
+
+    if not application_id:
+        return jsonify({'error': 'Application ID required'}), 400
+
+    try:
+        approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
+
+        # Reset all approval statuses to Pending
+        query = f"""
+        UPDATE `{approvals_table}`
+        SET status = 'Pending', approved_at = NULL
+        WHERE application_id = @application_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        # Get application and approvers
+        sabbatical = get_application_by_id(application_id)
+
+        # Get all approvers
+        approvers_query = f"""
+        SELECT approver_email, approver_name, approver_role
+        FROM `{approvals_table}`
+        WHERE application_id = @application_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id),
+            ]
+        )
+        approvers = list(bq_client.query(approvers_query, job_config=job_config).result())
+
+        # Notify all approvers
+        for approver in approvers:
+            subject = f"Plan Resubmitted - {sabbatical.get('employee_name', '')}"
+            html_body = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                <div style="background-color: #6B46C1; padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">Plan Resubmitted</h1>
+                </div>
+                <div style="padding: 20px; background-color: #f8f9fa;">
+                    <p>Hi {approver.approver_name},</p>
+                    <p><strong>{sabbatical.get('employee_name', '')}</strong> has updated and resubmitted their sabbatical plan for approval.</p>
+
+                    <div style="background-color: white; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Employee:</strong> {sabbatical.get('employee_name', '')}</p>
+                        <p style="margin: 5px 0;"><strong>Dates:</strong> {sabbatical.get('start_date', 'TBD')} - {sabbatical.get('end_date', 'TBD')}</p>
+                        <p style="margin: 5px 0;"><strong>Your Role:</strong> {approver.approver_role}</p>
+                    </div>
+
+                    <p>Please review the updated plan and provide your approval.</p>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical?email={sabbatical.get('employee_email', '')}"
+                           style="display: inline-block; background-color: #6B46C1; color: white; padding: 12px 30px;
+                                  text-decoration: none; border-radius: 5px; font-weight: bold;">
+                            Review & Approve
+                        </a>
+                    </div>
+                </div>
+            </div>
+            """
+            send_email(approver.approver_email, subject, html_body)
+
+        # Add activity
+        add_activity(application_id, user.get('email', ''), user.get('name', ''), 'plan_resubmitted',
+                    f"{user.get('name', '')} resubmitted the plan for approval")
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error resubmitting plan: {e}")
+        return jsonify({'error': 'Failed to resubmit plan'}), 500
+
+
+@app.route('/api/my-sabbatical/approval-status', methods=['GET'])
+def get_approval_status():
+    """Get current approval status for a sabbatical plan."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    application_id = request.args.get('application_id')
+    if not application_id:
+        return jsonify({'error': 'Application ID required'}), 400
+
+    try:
+        approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
+
+        query = f"""
+        SELECT approver_email, approver_name, approver_role, approver_type, status, approved_at, notes
+        FROM `{approvals_table}`
+        WHERE application_id = @application_id
+        ORDER BY approver_type, approver_role
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id)
+            ]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+
+        approvals = []
+        for row in results:
+            approvals.append({
+                'email': row.approver_email,
+                'name': row.approver_name,
+                'role': row.approver_role,
+                'type': row.approver_type,
+                'status': row.status,
+                'approved_at': row.approved_at.isoformat() if row.approved_at else None,
+                'notes': row.notes
+            })
+
+        return jsonify({'approvals': approvals})
+    except Exception as e:
+        logger.error(f"Error getting approval status: {e}")
+        return jsonify({'approvals': []})
 
 
 # ============ Auth Routes ============
@@ -1656,7 +2423,8 @@ def get_stats():
 
     total = len(applications)
     submitted = len([a for a in applications if a.get('status') == 'Submitted'])
-    under_review = len([a for a in applications if a.get('status') == 'Under Review'])
+    tentatively_approved = len([a for a in applications if a.get('status') == 'Tentatively Approved'])
+    plan_submitted = len([a for a in applications if a.get('status') == 'Plan Submitted'])
     approved = len([a for a in applications if a.get('status') == 'Approved'])
     completed = len([a for a in applications if a.get('status') == 'Completed'])
     denied = len([a for a in applications if a.get('status') == 'Denied'])
@@ -1665,7 +2433,8 @@ def get_stats():
     return jsonify({
         'total': total,
         'submitted': submitted,
-        'under_review': under_review,
+        'tentatively_approved': tentatively_approved,
+        'plan_submitted': plan_submitted,
         'approved': approved,
         'completed': completed,
         'denied': denied,
