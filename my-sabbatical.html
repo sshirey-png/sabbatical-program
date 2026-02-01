@@ -308,14 +308,7 @@
                         <span class="hidden sm:inline">Planning </span>Checklist
                     </button>
                     <button onclick="showTab('coverage')" id="tab-coverage" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
-                        <span class="hidden sm:inline">My </span>Team
-                    </button>
-                    <button onclick="showTab('documents')" id="tab-documents" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
-                        Documents
-                    </button>
-                    <button onclick="showTab('messages')" id="tab-messages" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
-                        Messages
-                        <span id="unreadBadge" class="hidden ml-1 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">3</span>
+                        <span class="hidden sm:inline">My </span>Plan
                     </button>
                     <button onclick="showTab('history')" id="tab-history" class="px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive">
                         History
@@ -421,81 +414,6 @@
                         <h4 class="font-semibold text-fls-navy mb-4">Coverage Contacts</h4>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="coverageContacts">
                             <!-- Contacts will be rendered by JavaScript -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Documents Tab -->
-                <div id="content-documents" class="hidden">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-fls-navy">Documents</h3>
-                            <p class="text-sm text-gray-500">Upload and manage sabbatical documents</p>
-                        </div>
-                        <button onclick="openUploadModal()" class="bg-fls-orange hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
-                            </svg>
-                            Upload Document
-                        </button>
-                    </div>
-
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Document</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Uploaded By</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="documentsTable">
-                                <!-- Rows will be rendered by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="noDocuments" class="hidden text-center py-8 text-gray-500">
-                        No documents uploaded yet.
-                    </div>
-                </div>
-
-                <!-- Messages Tab -->
-                <div id="content-messages" class="hidden">
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-fls-navy">Messages & Updates</h3>
-                            <p class="text-sm text-gray-500">Communication about your sabbatical</p>
-                        </div>
-                    </div>
-
-                    <!-- Messages List -->
-                    <div id="messagesList" class="space-y-4 mb-6 max-h-96 overflow-y-auto">
-                        <!-- Messages will be rendered by JavaScript -->
-                    </div>
-                    <div id="noMessages" class="hidden text-center py-8 text-gray-500">
-                        No messages yet.
-                    </div>
-
-                    <!-- New Message Form -->
-                    <div class="border-t pt-6">
-                        <h4 class="font-semibold text-gray-700 mb-3">Send a Message</h4>
-                        <div class="space-y-3">
-                            <select id="messageRecipient" class="w-full px-4 py-2 border rounded-lg text-sm">
-                                <option value="">Select Recipient...</option>
-                                <option value="manager">My Manager</option>
-                                <option value="hr">HR Team</option>
-                                <option value="benefits">Benefits Team</option>
-                                <option value="payroll">Payroll Team</option>
-                                <option value="talent">Talent Team</option>
-                            </select>
-                            <textarea id="messageText" rows="3" placeholder="Type your message..."
-                                class="w-full px-4 py-2 border rounded-lg text-sm"></textarea>
-                            <div class="flex justify-end">
-                                <button onclick="sendMessage()" class="bg-fls-navy hover:bg-blue-900 text-white px-6 py-2 rounded-lg text-sm font-medium">
-                                    Send Message
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -636,11 +554,16 @@
                             class="w-full px-4 py-2 border rounded-lg"></textarea>
                     </div>
                 </div>
-                <div class="flex justify-end gap-3 mt-6">
-                    <button onclick="closeCoverageModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
-                    <button onclick="saveCoverage()" id="coverageSaveBtn" class="bg-fls-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium">
-                        Add Assignment
+                <div class="flex justify-between mt-6">
+                    <button onclick="deleteCoverage()" id="coverageDeleteBtn" class="hidden px-4 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg">
+                        Delete
                     </button>
+                    <div class="flex gap-3 ml-auto">
+                        <button onclick="closeCoverageModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                        <button onclick="saveCoverage()" id="coverageSaveBtn" class="bg-fls-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium">
+                            Add Assignment
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -733,12 +656,15 @@
             try {
                 const emailParam = getEmailParam();
                 const url = emailParam ? `/api/my-sabbatical?email=${encodeURIComponent(emailParam)}` : '/api/my-sabbatical';
+                console.log('Fetching:', url);
                 const response = await fetch(url);
                 const data = await response.json();
+                console.log('API Response:', data);
 
                 document.getElementById('loadingState').classList.add('hidden');
 
                 if (data.found && data.sabbatical) {
+                    console.log('Found sabbatical, rendering...');
                     sabbaticalData = data.sabbatical;
                     checklistData = data.checklist || [];
                     coverageData = data.coverage || [];
@@ -760,6 +686,7 @@
                     renderSabbaticalContent();
                     document.getElementById('sabbaticalContent').classList.remove('hidden');
                 } else {
+                    console.log('No sabbatical found in response. data.found:', data.found, 'data.sabbatical:', data.sabbatical);
                     document.getElementById('noSabbaticalState').classList.remove('hidden');
                 }
             } catch (e) {
@@ -843,7 +770,6 @@
             // Render all tabs
             renderChecklist();
             renderCoverage();
-            renderMessages();
             renderHistory();
         }
 
@@ -1086,7 +1012,7 @@
 
         // Tab navigation
         function showTab(tab) {
-            const tabs = ['checklist', 'coverage', 'documents', 'messages', 'history'];
+            const tabs = ['checklist', 'coverage', 'history'];
             tabs.forEach(t => {
                 document.getElementById(`tab-${t}`).className = t === tab ? 'px-4 py-4 text-sm font-medium whitespace-nowrap tab-active' : 'px-4 py-4 text-sm font-medium whitespace-nowrap tab-inactive';
                 document.getElementById(`content-${t}`).classList.toggle('hidden', t !== tab);
@@ -1300,6 +1226,7 @@
             editingCoverageId = null;
             document.getElementById('coverageModalTitle').textContent = 'Add Coverage Assignment';
             document.getElementById('coverageSaveBtn').textContent = 'Add Assignment';
+            document.getElementById('coverageDeleteBtn').classList.add('hidden');
             document.getElementById('coverageResponsibility').value = '';
             document.getElementById('coveragePerson').value = '';
             document.getElementById('coverageEmail').value = '';
@@ -1316,6 +1243,7 @@
             editingCoverageId = coverageId;
             document.getElementById('coverageModalTitle').textContent = 'Edit Coverage Assignment';
             document.getElementById('coverageSaveBtn').textContent = 'Save Changes';
+            document.getElementById('coverageDeleteBtn').classList.remove('hidden');
             document.getElementById('coverageResponsibility').value = coverage.responsibility || '';
             document.getElementById('coveragePerson').value = coverage.covered_by || '';
             document.getElementById('coverageEmail').value = coverage.email || '';
@@ -1328,6 +1256,33 @@
         function closeCoverageModal() {
             editingCoverageId = null;
             document.getElementById('coverageModal').classList.add('hidden');
+        }
+
+        async function deleteCoverage() {
+            if (!editingCoverageId) return;
+
+            if (!confirm('Are you sure you want to delete this coverage assignment?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/my-sabbatical/coverage/${editingCoverageId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove from local data
+                    coverageData = coverageData.filter(c => c.id !== editingCoverageId);
+                    closeCoverageModal();
+                    renderCoverage();
+                } else {
+                    alert(result.error || 'Failed to delete coverage');
+                }
+            } catch (e) {
+                console.error('Failed to delete coverage:', e);
+                alert('Failed to delete coverage');
+            }
         }
 
         async function saveCoverage() {

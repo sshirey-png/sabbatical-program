@@ -1221,27 +1221,36 @@ def get_my_sabbatical():
 
     # Check if admin is viewing another employee's sabbatical
     requested_email = request.args.get('email', '').lower()
-    if requested_email and requested_email != user.get('email', '').lower():
+    user_email = user.get('email', '').lower()
+    is_admin = user.get('is_admin') or user_email in [e.lower() for e in ADMIN_USERS]
+
+    if requested_email and requested_email != user_email:
         # Verify user is admin
-        if not user.get('is_admin'):
+        if not is_admin:
             return jsonify({'error': 'Admin access required to view other employees'}), 403
         email = requested_email
         viewing_as_admin = True
     else:
-        email = user.get('email', '').lower()
+        email = user_email
         viewing_as_admin = False
     ensure_my_sabbatical_tables()
 
     # Find approved/planning sabbatical for this user
     all_applications = read_all_applications()
+    logger.info(f"Looking for sabbatical for email: {email}, found {len(all_applications)} total applications")
+
     sabbatical = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
-            if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+        app_email = app.get('employee_email', '').lower()
+        app_status = app.get('status', '')
+        if app_email == email:
+            logger.info(f"Found matching email: {app_email}, status: {app_status}")
+            if app_status in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 sabbatical = app
                 break
 
     if not sabbatical:
+        logger.info(f"No active sabbatical found for {email}")
         return jsonify({'found': False})
 
     application_id = sabbatical['application_id']
@@ -1648,6 +1657,34 @@ def update_coverage(coverage_id):
     except Exception as e:
         logger.error(f"Error updating coverage: {e}")
         return jsonify({'error': 'Failed to update coverage'}), 500
+
+
+@app.route('/api/my-sabbatical/coverage/<coverage_id>', methods=['DELETE'])
+def delete_coverage(coverage_id):
+    """Delete a coverage assignment."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    try:
+        coverage_table = f"{PROJECT_ID}.{DATASET_ID}.coverage_assignments"
+
+        query = f"""
+        DELETE FROM `{coverage_table}`
+        WHERE id = @coverage_id
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("coverage_id", "STRING", coverage_id),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting coverage: {e}")
+        return jsonify({'error': 'Failed to delete coverage'}), 500
 
 
 @app.route('/api/my-sabbatical/messages', methods=['POST'])
@@ -2327,10 +2364,12 @@ def auth_callback():
         user_info = token.get('userinfo')
 
         if user_info:
+            email = user_info.get('email', '').lower()
             session['user'] = {
                 'email': user_info.get('email'),
                 'name': user_info.get('name'),
-                'picture': user_info.get('picture')
+                'picture': user_info.get('picture'),
+                'is_admin': email in [e.lower() for e in ADMIN_USERS]
             }
 
         # Redirect back to the app with admin view

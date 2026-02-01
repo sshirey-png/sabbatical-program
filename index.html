@@ -557,13 +557,37 @@
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-xl font-bold text-fls-navy mb-4">Sabbatical Calendar</h2>
 
-                    <!-- Month Navigation -->
+                    <!-- Filters Row -->
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <!-- Location Filter -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium text-gray-700">Location:</label>
+                            <select id="calendarLocationFilter" onchange="renderCalendar()" class="px-3 py-2 border rounded-lg text-sm">
+                                <option value="all">All Locations</option>
+                            </select>
+                        </div>
+
+                        <!-- View Toggle -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-medium text-gray-700">View:</label>
+                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                <button onclick="setCalendarView('month')" id="viewMonthBtn" class="px-3 py-1 text-sm font-medium rounded-md bg-fls-navy text-white">
+                                    Month
+                                </button>
+                                <button onclick="setCalendarView('year')" id="viewYearBtn" class="px-3 py-1 text-sm font-medium rounded-md text-gray-600 hover:text-gray-800">
+                                    Year
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
                     <div class="flex items-center justify-between mb-6">
-                        <button onclick="changeCalendarMonth(-1)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">
+                        <button onclick="changeCalendarPeriod(-1)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">
                             ← Previous
                         </button>
                         <h3 id="calendarMonthTitle" class="text-xl font-bold text-fls-navy"></h3>
-                        <button onclick="changeCalendarMonth(1)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">
+                        <button onclick="changeCalendarPeriod(1)" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium">
                             Next →
                         </button>
                     </div>
@@ -594,9 +618,9 @@
                         </div>
                     </div>
 
-                    <!-- Sabbaticals This Month -->
+                    <!-- Sabbaticals This Month/Year -->
                     <div class="mt-6">
-                        <h3 class="text-lg font-semibold text-fls-navy mb-3">Sabbaticals This Month</h3>
+                        <h3 id="calendarListTitle" class="text-lg font-semibold text-fls-navy mb-3">Sabbaticals This Month</h3>
                         <div id="calendarList" class="space-y-2">
                             <!-- Populated by JS -->
                         </div>
@@ -887,21 +911,53 @@
         // Calendar state
         let currentCalendarDate = new Date();
         let calendarData = null;
+        let calendarView = 'month'; // 'month' or 'year'
 
         // Load calendar data
         async function loadCalendarData() {
             try {
                 const response = await fetch('/api/calendar');
                 calendarData = await response.json();
+                populateLocationFilter();
                 renderCalendar();
             } catch (e) {
                 console.error('Failed to load calendar:', e);
             }
         }
 
-        // Change calendar month
-        function changeCalendarMonth(delta) {
-            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+        // Populate location filter dropdown
+        function populateLocationFilter() {
+            if (!calendarData || !calendarData.by_location) return;
+            const select = document.getElementById('calendarLocationFilter');
+            const locations = Object.keys(calendarData.by_location)
+                .filter(loc => loc && loc !== 'Unknown' && loc !== 'null')
+                .sort();
+            select.innerHTML = '<option value="all">All Locations</option>' +
+                locations.map(loc => `<option value="${loc}">${loc}</option>`).join('');
+        }
+
+        // Set calendar view (month or year)
+        function setCalendarView(view) {
+            calendarView = view;
+            const monthBtn = document.getElementById('viewMonthBtn');
+            const yearBtn = document.getElementById('viewYearBtn');
+            if (view === 'month') {
+                monthBtn.className = 'px-3 py-1 text-sm font-medium rounded-md bg-fls-navy text-white';
+                yearBtn.className = 'px-3 py-1 text-sm font-medium rounded-md text-gray-600 hover:text-gray-800';
+            } else {
+                monthBtn.className = 'px-3 py-1 text-sm font-medium rounded-md text-gray-600 hover:text-gray-800';
+                yearBtn.className = 'px-3 py-1 text-sm font-medium rounded-md bg-fls-navy text-white';
+            }
+            renderCalendar();
+        }
+
+        // Change calendar period (month or year depending on view)
+        function changeCalendarPeriod(delta) {
+            if (calendarView === 'month') {
+                currentCalendarDate.setMonth(currentCalendarDate.getMonth() + delta);
+            } else {
+                currentCalendarDate.setFullYear(currentCalendarDate.getFullYear() + delta);
+            }
             renderCalendar();
         }
 
@@ -922,10 +978,28 @@
 
             const year = currentCalendarDate.getFullYear();
             const month = currentCalendarDate.getMonth();
-
-            // Update title
             const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                                'July', 'August', 'September', 'October', 'November', 'December'];
+
+            // Get selected location filter
+            const locationFilter = document.getElementById('calendarLocationFilter').value;
+
+            // Filter applications by location
+            let allApps = calendarData.applications || [];
+            if (locationFilter !== 'all') {
+                allApps = allApps.filter(app => app.employee_location === locationFilter);
+            }
+
+            if (calendarView === 'year') {
+                renderYearView(year, allApps, monthNames);
+            } else {
+                renderMonthView(year, month, allApps, monthNames);
+            }
+        }
+
+        // Render month view
+        function renderMonthView(year, month, allApps, monthNames) {
+            // Update title
             document.getElementById('calendarMonthTitle').textContent = `${monthNames[month]} ${year}`;
 
             // Get first day and number of days
@@ -934,7 +1008,7 @@
             const today = new Date();
 
             // Get sabbaticals for this month
-            const apps = (calendarData.applications || []).filter(app => {
+            const apps = allApps.filter(app => {
                 if (!app.start_date || !app.end_date) return false;
                 const start = new Date(app.start_date);
                 const end = new Date(app.end_date);
@@ -945,6 +1019,7 @@
 
             // Build calendar grid
             const grid = document.getElementById('calendarGrid');
+            grid.className = 'grid grid-cols-7'; // Reset to 7-column grid for month view
             let html = '';
 
             // Empty cells before first day
@@ -991,6 +1066,7 @@
             grid.innerHTML = html;
 
             // Render list of sabbaticals this month
+            document.getElementById('calendarListTitle').textContent = 'Sabbaticals This Month';
             const listDiv = document.getElementById('calendarList');
             if (apps.length > 0) {
                 listDiv.innerHTML = apps.sort((a, b) => a.start_date.localeCompare(b.start_date)).map(app => `
@@ -1007,6 +1083,81 @@
                 `).join('');
             } else {
                 listDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No sabbaticals scheduled this month.</p>';
+            }
+        }
+
+        // Render year view
+        function renderYearView(year, allApps, monthNames) {
+            // Update title
+            document.getElementById('calendarMonthTitle').textContent = `${year}`;
+
+            // Get sabbaticals for this year
+            const apps = allApps.filter(app => {
+                if (!app.start_date || !app.end_date) return false;
+                const start = new Date(app.start_date);
+                const end = new Date(app.end_date);
+                const yearStart = new Date(year, 0, 1);
+                const yearEnd = new Date(year, 11, 31);
+                return start <= yearEnd && end >= yearStart;
+            });
+
+            // Build year grid (4 rows x 3 columns of months)
+            const grid = document.getElementById('calendarGrid');
+            let html = '';
+
+            for (let m = 0; m < 12; m++) {
+                const monthStart = new Date(year, m, 1);
+                const monthEnd = new Date(year, m + 1, 0);
+
+                // Count sabbaticals this month
+                const monthApps = apps.filter(app => {
+                    const start = new Date(app.start_date);
+                    const end = new Date(app.end_date);
+                    return start <= monthEnd && end >= monthStart;
+                });
+
+                const isCurrentMonth = new Date().getFullYear() === year && new Date().getMonth() === m;
+
+                html += `
+                    <div class="p-3 border rounded-lg ${isCurrentMonth ? 'bg-blue-50 border-blue-300' : 'bg-white'} cursor-pointer hover:shadow-md transition-shadow"
+                         onclick="currentCalendarDate = new Date(${year}, ${m}, 1); setCalendarView('month');">
+                        <div class="font-semibold text-sm ${isCurrentMonth ? 'text-blue-700' : 'text-gray-700'} mb-2">${monthNames[m]}</div>
+                        <div class="space-y-1">
+                            ${monthApps.slice(0, 4).map(app => `
+                                <div class="flex items-center gap-1">
+                                    <div class="w-2 h-2 rounded-full ${getCalendarColor(app.status)}"></div>
+                                    <span class="text-xs text-gray-600 truncate">${app.employee_name.split(',')[0]}</span>
+                                </div>
+                            `).join('')}
+                            ${monthApps.length > 4 ? `<div class="text-xs text-gray-400">+${monthApps.length - 4} more</div>` : ''}
+                            ${monthApps.length === 0 ? '<div class="text-xs text-gray-300">No sabbaticals</div>' : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Year view uses a 3-column grid instead of 7
+            grid.className = 'grid grid-cols-3 sm:grid-cols-4 gap-3 p-2';
+            grid.innerHTML = html;
+
+            // Render list of all sabbaticals this year
+            document.getElementById('calendarListTitle').textContent = 'Sabbaticals This Year';
+            const listDiv = document.getElementById('calendarList');
+            if (apps.length > 0) {
+                listDiv.innerHTML = apps.sort((a, b) => a.start_date.localeCompare(b.start_date)).map(app => `
+                    <div class="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                         onclick="viewApplication('${app.application_id}')">
+                        <div class="w-3 h-3 rounded-full ${getCalendarColor(app.status)}"></div>
+                        <div class="flex-1">
+                            <span class="font-medium">${app.employee_name}</span>
+                            <span class="text-sm text-gray-500 ml-2">${app.employee_location || ''}</span>
+                        </div>
+                        <div class="text-sm text-gray-600">${app.start_date} → ${app.end_date}</div>
+                        <span class="px-2 py-1 rounded text-xs ${getStatusClass(app.status)}">${app.status}</span>
+                    </div>
+                `).join('');
+            } else {
+                listDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No sabbaticals scheduled this year.</p>';
             }
         }
 
