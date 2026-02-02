@@ -1471,6 +1471,10 @@
                                 class="bg-fls-orange hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-medium">
                                 Update
                             </button>
+                            <button onclick="deleteApplication('${app.application_id}', '${app.employee_name.replace(/'/g, "\\'")}')"
+                                class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium">
+                                Delete
+                            </button>
                         </div>
                         ${app.status_updated_by ? `
                         <div class="text-xs text-gray-500 mt-2">
@@ -1511,6 +1515,33 @@
             } catch (error) {
                 console.error('Update failed:', error);
                 alert('Failed to update status');
+            }
+        }
+
+        // Delete application (admin only)
+        async function deleteApplication(applicationId, employeeName) {
+            if (!confirm(`Are you sure you want to delete the application for ${employeeName}?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/applications/${applicationId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    closeModal();
+                    await loadAdminData();
+                    alert('Application deleted successfully.');
+                } else {
+                    alert(result.error || 'Failed to delete application');
+                }
+            } catch (error) {
+                console.error('Delete failed:', error);
+                alert('Failed to delete application');
             }
         }
 

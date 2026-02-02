@@ -156,7 +156,7 @@ def send_application_confirmation(application):
             </ul>
 
             <div style="background-color: #e47727; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
-                <a href="https://sabbatical-program-965913991496.us-central1.run.app/"
+                <a href="https://sabbatical-program-965913991496.us-central1.run.app/my-sabbatical"
                    style="color: white; text-decoration: none; font-weight: bold;">
                     Check Your Application Status
                 </a>
@@ -2451,6 +2451,39 @@ def update_application_status(application_id):
 
     except Exception as e:
         logger.error(f"Error updating application: {e}")
+        return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/admin/applications/<application_id>', methods=['DELETE'])
+@require_admin
+def delete_application_admin(application_id):
+    """Delete an application (admin only)."""
+    try:
+        user = session.get('user', {})
+
+        # Get application info for logging
+        application = get_application_by_id(application_id)
+        if not application:
+            return jsonify({'error': 'Application not found'}), 404
+
+        # Delete from BigQuery
+        query = f"""
+            DELETE FROM `{PROJECT_ID}.{DATASET_ID}.{TABLE_ID}`
+            WHERE application_id = @application_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("application_id", "STRING", application_id)
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        logger.info(f"Application {application_id} for {application.get('employee_name')} deleted by {user.get('email')}")
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error deleting application: {e}")
         return jsonify({'error': 'Server error'}), 500
 
 
