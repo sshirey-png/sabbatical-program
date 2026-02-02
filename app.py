@@ -1947,7 +1947,8 @@ def get_date_change_requests():
             dcr.*,
             a.employee_name,
             a.employee_email,
-            a.sabbatical_option
+            a.leave_weeks,
+            a.salary_percentage
         FROM `{date_changes_table}` dcr
         JOIN `{PROJECT_ID}.{DATASET_ID}.applications` a ON dcr.application_id = a.application_id
         WHERE dcr.status = 'Pending'
@@ -1957,12 +1958,14 @@ def get_date_change_requests():
 
         requests = []
         for row in results:
+            # Compute sabbatical_option from leave_weeks and salary_percentage
+            sabbatical_option = f"{row.leave_weeks} Weeks - {row.salary_percentage}% Salary" if row.leave_weeks else "N/A"
             requests.append({
                 'id': row.id,
                 'application_id': row.application_id,
                 'employee_name': row.employee_name,
                 'employee_email': row.employee_email,
-                'sabbatical_option': row.sabbatical_option,
+                'sabbatical_option': sabbatical_option,
                 'old_start_date': row.old_start_date.isoformat() if row.old_start_date else None,
                 'old_end_date': row.old_end_date.isoformat() if row.old_end_date else None,
                 'new_start_date': row.new_start_date.isoformat() if row.new_start_date else None,
