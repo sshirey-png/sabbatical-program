@@ -381,6 +381,32 @@
 
                 <!-- Coverage Tab -->
                 <div id="content-coverage" class="hidden">
+                    <!-- Plan Documents Section -->
+                    <div class="mb-8 pb-6 border-b">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-fls-navy">Plan Documents</h3>
+                                <p class="text-sm text-gray-500">Link to your sabbatical planning documents</p>
+                            </div>
+                            <button onclick="openPlanLinkModal()" class="bg-fls-navy hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                                </svg>
+                                Add Link
+                            </button>
+                        </div>
+                        <div id="planLinksContainer" class="space-y-2">
+                            <!-- Links will be rendered by JavaScript -->
+                        </div>
+                        <div id="noPlanLinks" class="text-center py-6 text-gray-500 bg-gray-50 rounded-lg">
+                            <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                            </svg>
+                            No plan documents linked yet. Add a link to your Google Doc, OneDrive, or other planning document.
+                        </div>
+                    </div>
+
+                    <!-- Coverage Plan Section -->
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
                             <h3 class="text-lg font-semibold text-fls-navy">Coverage Plan</h3>
@@ -579,14 +605,57 @@
         </div>
     </div>
 
+    <!-- Plan Link Modal -->
+    <div id="planLinkModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full">
+            <div class="border-b px-6 py-4 flex justify-between items-center">
+                <h2 id="planLinkModalTitle" class="text-lg font-bold text-fls-navy">Add Plan Document Link</h2>
+                <button onclick="closePlanLinkModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Link Title</label>
+                    <input type="text" id="planLinkTitle" placeholder="e.g., Sabbatical Planning Doc"
+                        class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                    <input type="url" id="planLinkUrl" placeholder="https://docs.google.com/..."
+                        class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p class="text-sm text-blue-800">
+                        <strong>Tip:</strong> You can link to Google Docs, OneDrive, Notion, or any other document sharing service.
+                    </p>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button onclick="closePlanLinkModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                    <button id="savePlanLinkBtn" onclick="savePlanLink()" class="bg-fls-navy hover:bg-blue-900 text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                        <span id="savePlanLinkText">Save Link</span>
+                        <svg id="savePlanLinkSpinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // State
         let sabbaticalData = null;
         let checklistData = [];
         let coverageData = [];
+        let planLinksData = [];
         let messagesData = [];
         let historyData = [];
         let editingCoverageId = null;
+        let editingPlanLinkId = null;
         let currentUser = null;
         let currentTaskId = null;
 
@@ -683,6 +752,7 @@
                     sabbaticalData = data.sabbatical;
                     checklistData = data.checklist || [];
                     coverageData = data.coverage || [];
+                    planLinksData = data.plan_links || [];
                     messagesData = data.messages || [];
                     historyData = data.history || [];
 
@@ -790,6 +860,7 @@
             // Render all tabs
             renderChecklist();
             renderCoverage();
+            renderPlanLinks();
             renderHistory();
         }
 
@@ -1395,6 +1466,167 @@
                 console.error('Failed to save coverage:', e);
                 alert('Failed to save coverage');
             }
+        }
+
+        // Plan Link Modal functions
+        function openPlanLinkModal(linkId = null) {
+            editingPlanLinkId = linkId;
+            if (linkId) {
+                const link = planLinksData.find(l => l.id === linkId);
+                if (link) {
+                    document.getElementById('planLinkTitle').value = link.title;
+                    document.getElementById('planLinkUrl').value = link.url;
+                    document.getElementById('planLinkModalTitle').textContent = 'Edit Plan Document Link';
+                    document.getElementById('savePlanLinkText').textContent = 'Update Link';
+                }
+            } else {
+                document.getElementById('planLinkTitle').value = '';
+                document.getElementById('planLinkUrl').value = '';
+                document.getElementById('planLinkModalTitle').textContent = 'Add Plan Document Link';
+                document.getElementById('savePlanLinkText').textContent = 'Save Link';
+            }
+            document.getElementById('planLinkModal').classList.remove('hidden');
+        }
+
+        function closePlanLinkModal() {
+            editingPlanLinkId = null;
+            document.getElementById('planLinkModal').classList.add('hidden');
+        }
+
+        async function savePlanLink() {
+            const title = document.getElementById('planLinkTitle').value.trim();
+            const url = document.getElementById('planLinkUrl').value.trim();
+
+            if (!title || !url) {
+                alert('Please enter both a title and URL');
+                return;
+            }
+
+            // Basic URL validation
+            try {
+                new URL(url);
+            } catch {
+                alert('Please enter a valid URL');
+                return;
+            }
+
+            // Disable button and show spinner
+            const btn = document.getElementById('savePlanLinkBtn');
+            const btnText = document.getElementById('savePlanLinkText');
+            const btnSpinner = document.getElementById('savePlanLinkSpinner');
+            btn.disabled = true;
+            btnText.textContent = editingPlanLinkId ? 'Updating...' : 'Saving...';
+            btnSpinner.classList.remove('hidden');
+
+            try {
+                if (editingPlanLinkId) {
+                    // Update existing link
+                    const response = await fetch(`/api/my-sabbatical/plan-links/${editingPlanLinkId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, url })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        const idx = planLinksData.findIndex(l => l.id === editingPlanLinkId);
+                        if (idx >= 0) {
+                            planLinksData[idx] = { ...planLinksData[idx], title, url };
+                        }
+                        closePlanLinkModal();
+                        renderPlanLinks();
+                    } else {
+                        alert(result.error || 'Failed to update link');
+                    }
+                } else {
+                    // Add new link
+                    const response = await fetch('/api/my-sabbatical/plan-links', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, url })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        planLinksData.push({
+                            id: result.id,
+                            title,
+                            url,
+                            created_at: new Date().toISOString()
+                        });
+                        closePlanLinkModal();
+                        renderPlanLinks();
+                    } else {
+                        alert(result.error || 'Failed to save link');
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to save plan link:', e);
+                alert('Failed to save link');
+            } finally {
+                btn.disabled = false;
+                btnText.textContent = editingPlanLinkId ? 'Update Link' : 'Save Link';
+                btnSpinner.classList.add('hidden');
+            }
+        }
+
+        async function deletePlanLink(linkId) {
+            if (!confirm('Are you sure you want to remove this link?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/my-sabbatical/plan-links/${linkId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    planLinksData = planLinksData.filter(l => l.id !== linkId);
+                    renderPlanLinks();
+                } else {
+                    alert(result.error || 'Failed to delete link');
+                }
+            } catch (e) {
+                console.error('Failed to delete plan link:', e);
+                alert('Failed to delete link');
+            }
+        }
+
+        function renderPlanLinks() {
+            const container = document.getElementById('planLinksContainer');
+            const noLinks = document.getElementById('noPlanLinks');
+
+            if (!planLinksData || planLinksData.length === 0) {
+                container.innerHTML = '';
+                noLinks.classList.remove('hidden');
+                return;
+            }
+
+            noLinks.classList.add('hidden');
+            container.innerHTML = planLinksData.map(link => `
+                <div class="flex items-center justify-between bg-gray-50 rounded-lg p-3 hover:bg-gray-100">
+                    <a href="${link.url}" target="_blank" rel="noopener noreferrer"
+                       class="flex items-center gap-3 flex-1 text-fls-blue hover:text-fls-navy">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        <span class="font-medium">${link.title}</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>
+                    <div class="flex items-center gap-2 ml-2">
+                        <button onclick="openPlanLinkModal('${link.id}')" class="text-gray-400 hover:text-fls-blue p-1" title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button onclick="deletePlanLink('${link.id}')" class="text-gray-400 hover:text-red-500 p-1" title="Remove">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function sendMessage() {

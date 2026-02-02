@@ -322,7 +322,15 @@ def send_status_update(application, old_status, new_status, updated_by, notes=''
         </div>
     </div>
     """
-    send_email(application['employee_email'], subject, html_body)
+    # For Tentatively Approved, CC the supervisor chain
+    cc_emails = None
+    if new_status == 'Tentatively Approved':
+        supervisor_chain = get_supervisor_chain(application.get('employee_email', ''))
+        cc_emails = [s.get('email') for s in supervisor_chain if s.get('email')]
+        # Also CC Talent admin
+        cc_emails.append(SABBATICAL_ADMIN_EMAIL)
+
+    send_email(application['employee_email'], subject, html_body, cc_emails=cc_emails)
 
 
 # ============ Supervisor Chain Functions ============
@@ -1251,22 +1259,29 @@ def get_my_approvals():
 
 @app.route('/api/my-sabbatical', methods=['GET'])
 def get_my_sabbatical():
-    """Get sabbatical data for the logged-in user or specified employee (admin only)."""
+    """Get sabbatical data for the logged-in user or specified employee (admin/supervisor)."""
     user = session.get('user')
     if not user:
         return jsonify({'error': 'Authentication required'}), 401
 
-    # Check if admin is viewing another employee's sabbatical
+    # Check if admin or supervisor is viewing another employee's sabbatical
     requested_email = request.args.get('email', '').lower()
     user_email = user.get('email', '').lower()
     is_admin = user.get('is_admin') or user_email in [e.lower() for e in ADMIN_USERS]
 
     if requested_email and requested_email != user_email:
-        # Verify user is admin
+        # Check if user is admin OR a supervisor of the requested employee
+        is_supervisor = False
         if not is_admin:
-            return jsonify({'error': 'Admin access required to view other employees'}), 403
+            # Check if current user is in the employee's supervisor chain
+            supervisor_chain = get_supervisor_chain(requested_email)
+            supervisor_emails = [s.get('email', '').lower() for s in supervisor_chain]
+            is_supervisor = user_email in supervisor_emails
+
+        if not is_admin and not is_supervisor:
+            return jsonify({'error': 'Access denied - you must be an admin or supervisor to view this employee'}), 403
         email = requested_email
-        viewing_as_admin = True
+        viewing_as_admin = True  # Flag that we're viewing someone else's data
     else:
         email = user_email
         viewing_as_admin = False
@@ -1367,6 +1382,28 @@ def get_my_sabbatical():
     except Exception as e:
         logger.error(f"Error loading coverage: {e}")
 
+    # Get plan links
+    plan_links = []
+    try:
+        query = f"""
+        SELECT * FROM `{PROJECT_ID}.{DATASET_ID}.plan_links`
+        WHERE application_id = @application_id
+        ORDER BY created_at
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("application_id", "STRING", application_id)]
+        )
+        results = bq_client.query(query, job_config=job_config).result()
+        for row in results:
+            plan_links.append({
+                'id': row.id,
+                'title': row.title,
+                'url': row.url,
+                'created_at': row.created_at.isoformat() if row.created_at else ''
+            })
+    except Exception as e:
+        logger.error(f"Error loading plan links: {e}")
+
     # Get messages
     messages = []
     try:
@@ -1417,6 +1454,7 @@ def get_my_sabbatical():
         'sabbatical': sabbatical,
         'checklist': checklist,
         'coverage': coverage,
+        'plan_links': plan_links,
         'messages': messages,
         'history': history,
         'viewing_as_admin': viewing_as_admin
@@ -1754,6 +1792,148 @@ def delete_coverage(coverage_id):
     except Exception as e:
         logger.error(f"Error deleting coverage: {e}")
         return jsonify({'error': 'Failed to delete coverage'}), 500
+
+
+# ============ Plan Links Routes ============
+
+@app.route('/api/my-sabbatical/plan-links', methods=['POST'])
+def add_plan_link():
+    """Add a plan document link."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.json
+    title = data.get('title', '').strip()
+    url = data.get('url', '').strip()
+
+    if not title or not url:
+        return jsonify({'error': 'Title and URL are required'}), 400
+
+    email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
+    try:
+        # Find application for this user
+        all_applications = read_all_applications()
+        application = None
+        for app in all_applications:
+            if app.get('employee_email', '').lower() in emails_to_check:
+                if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
+                    application = app
+                    break
+
+        if not application:
+            return jsonify({'error': 'No active sabbatical application found'}), 404
+
+        plan_links_table = f"{PROJECT_ID}.{DATASET_ID}.plan_links"
+
+        # Ensure table exists
+        try:
+            bq_client.get_table(plan_links_table)
+        except Exception:
+            schema = [
+                bigquery.SchemaField("id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("application_id", "STRING", mode="REQUIRED"),
+                bigquery.SchemaField("employee_email", "STRING"),
+                bigquery.SchemaField("title", "STRING"),
+                bigquery.SchemaField("url", "STRING"),
+                bigquery.SchemaField("created_at", "TIMESTAMP"),
+                bigquery.SchemaField("created_by", "STRING"),
+            ]
+            table = bigquery.Table(plan_links_table, schema=schema)
+            bq_client.create_table(table)
+            logger.info(f"Created table {plan_links_table}")
+
+        link_id = str(uuid.uuid4())[:8]
+        query = f"""
+        INSERT INTO `{plan_links_table}` (id, application_id, employee_email, title, url, created_at, created_by)
+        VALUES (@id, @application_id, @employee_email, @title, @url, CURRENT_TIMESTAMP(), @created_by)
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("id", "STRING", link_id),
+                bigquery.ScalarQueryParameter("application_id", "STRING", application['application_id']),
+                bigquery.ScalarQueryParameter("employee_email", "STRING", primary_email),
+                bigquery.ScalarQueryParameter("title", "STRING", title),
+                bigquery.ScalarQueryParameter("url", "STRING", url),
+                bigquery.ScalarQueryParameter("created_by", "STRING", user.get('email')),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        return jsonify({'success': True, 'id': link_id})
+    except Exception as e:
+        logger.error(f"Error adding plan link: {e}")
+        return jsonify({'error': 'Failed to add plan link'}), 500
+
+
+@app.route('/api/my-sabbatical/plan-links/<link_id>', methods=['PATCH'])
+def update_plan_link(link_id):
+    """Update a plan document link."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.json
+    title = data.get('title', '').strip()
+    url = data.get('url', '').strip()
+
+    if not title or not url:
+        return jsonify({'error': 'Title and URL are required'}), 400
+
+    try:
+        plan_links_table = f"{PROJECT_ID}.{DATASET_ID}.plan_links"
+
+        query = f"""
+        UPDATE `{plan_links_table}`
+        SET title = @title, url = @url
+        WHERE id = @link_id
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("link_id", "STRING", link_id),
+                bigquery.ScalarQueryParameter("title", "STRING", title),
+                bigquery.ScalarQueryParameter("url", "STRING", url),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error updating plan link: {e}")
+        return jsonify({'error': 'Failed to update plan link'}), 500
+
+
+@app.route('/api/my-sabbatical/plan-links/<link_id>', methods=['DELETE'])
+def delete_plan_link(link_id):
+    """Delete a plan document link."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    try:
+        plan_links_table = f"{PROJECT_ID}.{DATASET_ID}.plan_links"
+
+        query = f"""
+        DELETE FROM `{plan_links_table}`
+        WHERE id = @link_id
+        """
+
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("link_id", "STRING", link_id),
+            ]
+        )
+        bq_client.query(query, job_config=job_config).result()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting plan link: {e}")
+        return jsonify({'error': 'Failed to delete plan link'}), 500
 
 
 @app.route('/api/my-sabbatical/messages', methods=['POST'])
@@ -2331,47 +2511,92 @@ def approve_plan():
                 )
                 approvers = list(bq_client.query(approvers_query, job_config=job_config).result())
                 approver_names = [a.approver_name for a in approvers]
-                approver_emails = [a.approver_email for a in approvers]
 
-                # Send final approval notification to everyone
-                all_recipients = approver_emails + [
-                    sabbatical.get('employee_email'),
-                    BENEFITS_EMAIL,
-                    PAYROLL_EMAIL
-                ]
+                # Get supervisor chain for CC
+                supervisor_chain = get_supervisor_chain(sabbatical.get('employee_email', ''))
+                supervisor_cc = [s.get('email') for s in supervisor_chain if s.get('email')]
 
-                subject = f"FINAL APPROVAL - Sabbatical for {sabbatical.get('employee_name', '')}"
+                # Determine the plan type display
+                leave_weeks = sabbatical.get('leave_weeks', 8)
+                salary_pct = sabbatical.get('salary_percentage', 100)
+                plan_type = f"{leave_weeks} Week Plan at {salary_pct}% Salary"
+
+                # Format dates nicely
+                start_date = sabbatical.get('start_date', 'TBD')
+                end_date = sabbatical.get('end_date', 'TBD')
+
+                # Get employee's first name for a personal touch
+                employee_name = sabbatical.get('employee_name', '')
+                first_name = employee_name.split()[0] if employee_name else 'Team Member'
+
+                subject = f"Congratulations! Your Sabbatical is Officially Approved - {employee_name}"
                 html_body = f"""
-                <div style="font-family: Arial, sans-serif; max-width: 600px;">
-                    <div style="background-color: #22c55e; padding: 20px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">Sabbatical FINAL APPROVAL</h1>
+                <div style="font-family: 'Open Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px 20px; text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+                        <h1 style="color: white; margin: 0; font-size: 28px;">Congratulations, {first_name}!</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Your sabbatical has been officially approved!</p>
                     </div>
-                    <div style="padding: 20px; background-color: #f8f9fa;">
-                        <p>Great news! The sabbatical for <strong>{sabbatical.get('employee_name', '')}</strong> has received final approval from all parties.</p>
+                    <div style="padding: 30px; background-color: #f8f9fa;">
+                        <p style="font-size: 16px; line-height: 1.6;">Dear {first_name},</p>
 
-                        <div style="background-color: white; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                            <p style="margin: 5px 0;"><strong>Employee:</strong> {sabbatical.get('employee_name', '')}</p>
-                            <p style="margin: 5px 0;"><strong>Email:</strong> {sabbatical.get('employee_email', '')}</p>
-                            <p style="margin: 5px 0;"><strong>Dates:</strong> {sabbatical.get('start_date', 'TBD')} - {sabbatical.get('end_date', 'TBD')}</p>
-                            <p style="margin: 5px 0;"><strong>Duration:</strong> {sabbatical.get('leave_weeks', '?')} weeks</p>
-                            <p style="margin: 5px 0;"><strong>Salary:</strong> {sabbatical.get('salary_percentage', '?')}%</p>
+                        <p style="font-size: 16px; line-height: 1.6;">We are thrilled to inform you that your sabbatical plan has received <strong>final approval</strong> from all parties! This is a wonderful milestone, and we want to thank you for all the thoughtful planning and preparation you've put into making this possible.</p>
+
+                        <p style="font-size: 16px; line-height: 1.6;">Your dedication to FirstLine Schools over the years has earned you this well-deserved time for rest, renewal, and personal growth. We hope this sabbatical brings you everything you're looking for.</p>
+
+                        <div style="background-color: #002f60; border-radius: 12px; padding: 25px; margin: 25px 0; color: white;">
+                            <h2 style="margin: 0 0 20px 0; color: white; font-size: 18px; text-align: center;">Your Approved Sabbatical Details</h2>
+                            <table style="width: 100%; color: white; border-collapse: collapse;">
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.2);"><strong>Duration:</strong></td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.2); text-align: right; font-size: 18px; font-weight: bold;">{leave_weeks} Weeks</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.2);"><strong>Salary:</strong></td>
+                                    <td style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.2); text-align: right; font-size: 18px; font-weight: bold;">{salary_pct}%</td>
+                                </tr>
+                                <tr style="background-color: rgba(228,119,39,0.3);">
+                                    <td style="padding: 15px 10px; border-radius: 8px 0 0 0;"><strong>Start Date:</strong></td>
+                                    <td style="padding: 15px 10px; text-align: right; font-size: 20px; font-weight: bold; border-radius: 0 8px 0 0;">{start_date}</td>
+                                </tr>
+                                <tr style="background-color: rgba(228,119,39,0.3);">
+                                    <td style="padding: 15px 10px; border-radius: 0 0 0 8px;"><strong>End Date:</strong></td>
+                                    <td style="padding: 15px 10px; text-align: right; font-size: 20px; font-weight: bold; border-radius: 0 0 8px 0;">{end_date}</td>
+                                </tr>
+                            </table>
                         </div>
 
-                        <p><strong>Approved by:</strong></p>
-                        <ul>
-                            {''.join([f"<li>{name}</li>" for name in approver_names])}
-                        </ul>
+                        <div style="background-color: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
+                            <p style="margin: 0 0 10px 0; font-weight: bold; color: #002f60;">What happens next?</p>
+                            <ul style="margin: 0; padding-left: 20px; color: #666;">
+                                <li style="margin-bottom: 8px;">HR, Benefits, and Payroll have been notified and will update your records</li>
+                                <li style="margin-bottom: 8px;">Continue any final handoff preparations with your coverage team</li>
+                                <li style="margin-bottom: 8px;">Enjoy your well-earned time away!</li>
+                            </ul>
+                        </div>
 
-                        <p style="color: #666; font-size: 0.9em; margin-top: 20px;">
-                            This notification was sent to: Employee, Management Chain, Talent, HR, Benefits, and Payroll.
-                        </p>
+                        <p style="font-size: 16px; line-height: 1.6;">Thank you for your continued commitment to our students and community. We look forward to welcoming you back refreshed and renewed!</p>
+
+                        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 5px;">Warm regards,</p>
+                        <p style="font-size: 16px; line-height: 1.6; margin-top: 0;"><strong>The FirstLine Schools Talent Team</strong></p>
+
+                        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
+
+                        <p style="font-size: 12px; color: #888; margin: 0;"><strong>Approved by:</strong> {', '.join(approver_names)}</p>
+                        <p style="font-size: 12px; color: #888; margin: 5px 0 0 0;">CC: HR, Benefits, Payroll, and Management Chain</p>
+                    </div>
+                    <div style="background-color: #002f60; padding: 20px; text-align: center;">
+                        <p style="color: white; margin: 0; font-size: 14px;">FirstLine Schools - Education For Life</p>
                     </div>
                 </div>
                 """
 
-                for recipient in all_recipients:
-                    if recipient:
-                        send_email(recipient, subject, html_body)
+                # Send TO the employee, CC everyone else
+                cc_list = [HR_EMAIL, BENEFITS_EMAIL, PAYROLL_EMAIL, SABBATICAL_ADMIN_EMAIL] + supervisor_cc
+                employee_email = sabbatical.get('employee_email')
+
+                if employee_email:
+                    send_email(employee_email, subject, html_body, cc_emails=cc_list)
 
                 # Add activity
                 add_activity(application_id, approver_email, user.get('name', ''), 'final_approval',
