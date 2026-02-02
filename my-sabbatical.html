@@ -731,6 +731,10 @@
             document.getElementById('currentStartDate').textContent = formatDate(s.start_date);
             document.getElementById('currentEndDate').textContent = formatDate(s.end_date);
 
+            // Journey timeline dates
+            document.getElementById('onLeaveDate').textContent = formatShortDate(s.start_date);
+            document.getElementById('completeDate').textContent = formatShortDate(s.end_date);
+
             // Option
             const optionMatch = s.sabbatical_option.match(/(\d+)\s*Weeks?.*?(\d+)%/i);
             if (optionMatch) {
