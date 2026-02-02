@@ -68,10 +68,16 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                         </svg>
-                        Admin Login
+                        Sign In
                     </a>
                     <div id="userInfo" class="hidden items-center gap-3">
                         <span id="userName" class="text-sm text-white"></span>
+                        <a href="/my-sabbatical" id="mySabbaticalLink" class="hidden inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/20 text-white hover:bg-white/30 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                            </svg>
+                            My Sabbatical Plan
+                        </a>
                         <a href="/logout" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-fls-blue rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -406,14 +412,27 @@
             <!-- My Applications Section -->
             <section class="bg-white rounded-xl shadow-md p-8">
                 <h2 class="text-2xl font-bold text-fls-navy mb-6">My Applications</h2>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Look up your applications by email</label>
+
+                <!-- Sign in prompt (shown when not logged in) -->
+                <div id="lookupSignInPrompt" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p class="text-gray-700 mb-3">Sign in to view your sabbatical application status.</p>
+                    <a href="/login" class="inline-flex items-center gap-2 bg-fls-navy hover:bg-blue-900 text-white px-6 py-2 rounded-lg font-medium transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
+                        Sign In
+                    </a>
+                </div>
+
+                <!-- Lookup form (shown when logged in) -->
+                <div id="lookupForm" class="hidden mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Your application status</label>
                     <div class="flex gap-2">
                         <input type="email" id="lookupEmail" placeholder="youremail@firstlineschools.org"
-                            class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange">
+                            class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-fls-orange focus:border-fls-orange" readonly>
                         <button type="button" onclick="lookupApplications()"
                             class="bg-fls-navy hover:bg-blue-900 text-white px-6 py-2 rounded-lg font-medium transition flex items-center gap-2">
-                            <span>Look Up</span>
+                            <span>View Status</span>
                             <div id="lookupLoader" class="loader hidden"></div>
                         </button>
                     </div>
@@ -669,16 +688,45 @@
                 const response = await fetch('/api/auth/status');
                 const data = await response.json();
 
-                if (data.authenticated && data.is_admin) {
-                    isAdmin = true;
+                if (data.authenticated) {
                     currentUser = data.user;
                     document.getElementById('loginBtn').classList.add('hidden');
                     document.getElementById('userInfo').classList.remove('hidden');
                     document.getElementById('userInfo').classList.add('flex');
                     document.getElementById('userName').textContent = data.user.name;
+
+                    if (data.is_admin) {
+                        isAdmin = true;
+                    }
+
+                    // Show lookup form and hide sign-in prompt
+                    document.getElementById('lookupSignInPrompt').classList.add('hidden');
+                    document.getElementById('lookupForm').classList.remove('hidden');
+                    document.getElementById('lookupEmail').value = data.user.email;
+
+                    // Auto-lookup their applications
+                    lookupApplications();
+
+                    // Check if user has an active sabbatical plan
+                    checkUserSabbatical(data.user.email);
                 }
             } catch (e) {
                 console.error('Auth check failed:', e);
+            }
+        }
+
+        // Check if user has a sabbatical plan
+        async function checkUserSabbatical(email) {
+            try {
+                const response = await fetch('/api/my-sabbatical');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.sabbatical) {
+                        document.getElementById('mySabbaticalLink').classList.remove('hidden');
+                    }
+                }
+            } catch (e) {
+                // User doesn't have a sabbatical plan - that's fine
             }
         }
 

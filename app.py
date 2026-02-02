@@ -57,6 +57,23 @@ ADMIN_USERS = [
     'tcole@firstlineschools.org'
 ]
 
+# Email aliases - map alternative emails to primary FirstLine emails
+# Format: 'alternate@email.com': 'primary@firstlineschools.org'
+EMAIL_ALIASES = {
+    'zach@esynola.org': 'zodonnell@firstlineschools.org',
+}
+
+
+def resolve_email_alias(email):
+    """
+    Resolve an email alias to the primary FirstLine email.
+    Returns the primary email if an alias exists, otherwise returns the original email.
+    """
+    if not email:
+        return email
+    return EMAIL_ALIASES.get(email.lower(), email)
+
+
 # Status values and their display order
 STATUS_VALUES = [
     'Submitted',
@@ -790,18 +807,34 @@ def submit_application():
 
 @app.route('/api/applications/lookup', methods=['GET'])
 def lookup_applications():
-    """Look up applications by email."""
+    """Look up applications by email. Requires authentication."""
+    # Require authentication
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required. Please sign in to view your application status.'}), 401
+
+    user_email = user.get('email', '').lower()
+    is_admin = user.get('is_admin') or user_email in [e.lower() for e in ADMIN_USERS]
+
     email = request.args.get('email', '').lower().strip()
 
     if not email:
         return jsonify({'error': 'Email required'}), 400
 
+    # Non-admins can only look up their own applications
+    primary_user_email = resolve_email_alias(user_email).lower()
+    if not is_admin and email.lower() not in [user_email, primary_user_email]:
+        return jsonify({'error': 'You can only view your own application status.'}), 403
+
+    # Resolve email alias to primary email for lookups
+    primary_email = resolve_email_alias(email).lower()
+
     all_applications = read_all_applications()
 
-    # Filter to applications by this email
+    # Filter to applications by this email (check both original and primary)
     user_applications = [
         a for a in all_applications
-        if a.get('employee_email', '').lower() == email
+        if a.get('employee_email', '').lower() in [email, primary_email]
     ]
 
     # Remove admin-only fields
@@ -820,6 +853,9 @@ def lookup_staff():
 
     if not email:
         return jsonify({'error': 'Email required'}), 400
+
+    # Resolve email alias to primary email for lookups
+    primary_email = resolve_email_alias(email).lower()
 
     # Look up staff in staff_master_list_with_function
     try:
@@ -841,7 +877,7 @@ def lookup_staff():
         """
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
-                bigquery.ScalarQueryParameter("email", "STRING", email)
+                bigquery.ScalarQueryParameter("email", "STRING", primary_email)
             ]
         )
         results = bq_client.query(query, job_config=job_config).result()
@@ -877,7 +913,7 @@ def lookup_staff():
         # Not found in staff list - check previous applications as fallback
         all_applications = read_all_applications()
         for a in all_applications:
-            if a.get('employee_email', '').lower() == email:
+            if a.get('employee_email', '').lower() in [email, primary_email]:
                 return jsonify({
                     'found': True,
                     'name': a.get('employee_name', ''),
@@ -1233,17 +1269,22 @@ def get_my_sabbatical():
     else:
         email = user_email
         viewing_as_admin = False
+
+    # Resolve email alias to primary email for lookups
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
     ensure_my_sabbatical_tables()
 
     # Find approved/planning sabbatical for this user
     all_applications = read_all_applications()
-    logger.info(f"Looking for sabbatical for email: {email}, found {len(all_applications)} total applications")
+    logger.info(f"Looking for sabbatical for email: {email} (primary: {primary_email}), found {len(all_applications)} total applications")
 
     sabbatical = None
     for app in all_applications:
         app_email = app.get('employee_email', '').lower()
         app_status = app.get('status', '')
-        if app_email == email:
+        if app_email in emails_to_check:
             logger.info(f"Found matching email: {app_email}, status: {app_status}")
             if app_status in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 sabbatical = app
@@ -1371,6 +1412,9 @@ def update_checklist_item(task_id):
         return jsonify({'error': 'Authentication required'}), 401
 
     email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
     data = request.json
     role = data.get('role')
     checked = data.get('checked', False)
@@ -1385,7 +1429,7 @@ def update_checklist_item(task_id):
     all_applications = read_all_applications()
     application_id = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
+        if app.get('employee_email', '').lower() in emails_to_check:
             if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 break
@@ -1462,6 +1506,9 @@ def add_checklist_note(task_id):
         return jsonify({'error': 'Authentication required'}), 401
 
     email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
     data = request.json
     note_text = data.get('text', '').strip()
 
@@ -1472,7 +1519,7 @@ def add_checklist_note(task_id):
     all_applications = read_all_applications()
     application_id = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
+        if app.get('employee_email', '').lower() in emails_to_check:
             if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 break
@@ -1558,13 +1605,16 @@ def add_coverage():
         return jsonify({'error': 'Authentication required'}), 401
 
     email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
     data = request.json
 
     # Find user's sabbatical
     all_applications = read_all_applications()
     application_id = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
+        if app.get('employee_email', '').lower() in emails_to_check:
             if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 break
@@ -1695,6 +1745,9 @@ def send_sabbatical_message():
         return jsonify({'error': 'Authentication required'}), 401
 
     email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
     data = request.json
 
     # Find user's sabbatical
@@ -1702,7 +1755,7 @@ def send_sabbatical_message():
     application_id = None
     sabbatical = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
+        if app.get('employee_email', '').lower() in emails_to_check:
             if app.get('status') in ['Tentatively Approved', 'Plan Submitted', 'Approved', 'Planning', 'Confirmed', 'On Sabbatical', 'Returning', 'Completed']:
                 application_id = app['application_id']
                 sabbatical = app
@@ -1775,6 +1828,9 @@ def request_date_change():
         return jsonify({'error': 'Authentication required'}), 401
 
     email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
+
     data = request.json
 
     # Find user's sabbatical
@@ -1782,7 +1838,7 @@ def request_date_change():
     application_id = None
     sabbatical = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
+        if app.get('employee_email', '').lower() in emails_to_check:
             if app.get('status') in ['Tentatively Approved', 'Approved', 'Planning', 'Confirmed']:
                 application_id = app['application_id']
                 sabbatical = app
@@ -1873,12 +1929,14 @@ def submit_plan_for_approval():
         return jsonify({'error': 'Authentication required'}), 401
 
     email = user.get('email', '').lower()
+    primary_email = resolve_email_alias(email).lower()
+    emails_to_check = [email, primary_email] if email != primary_email else [email]
 
     # Find user's sabbatical
     all_applications = read_all_applications()
     sabbatical = None
     for app in all_applications:
-        if app.get('employee_email', '').lower() == email:
+        if app.get('employee_email', '').lower() in emails_to_check:
             if app.get('status') == 'Tentatively Approved':
                 sabbatical = app
                 break
@@ -1889,8 +1947,8 @@ def submit_plan_for_approval():
     application_id = sabbatical['application_id']
 
     try:
-        # Get required approvers
-        approvers = get_required_approvers(email)
+        # Get required approvers - use primary email for supervisor chain lookup
+        approvers = get_required_approvers(primary_email)
 
         # Create plan_approvals table entry for tracking
         approvals_table = f"{PROJECT_ID}.{DATASET_ID}.plan_approvals"
