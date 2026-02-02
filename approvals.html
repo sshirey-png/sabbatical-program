@@ -54,9 +54,17 @@
             <p class="text-gray-500 mt-2">You have no pending sabbatical approvals.</p>
         </div>
 
+        <!-- Date Change Requests Section -->
+        <div id="dateChangesSection" class="hidden mb-8">
+            <h2 class="text-lg font-semibold text-fls-navy mb-4">Date Change Requests</h2>
+            <div id="dateChangesContainer" class="space-y-4">
+                <!-- Date change cards will be rendered here -->
+            </div>
+        </div>
+
         <!-- Approvals List -->
         <div id="approvalsList" class="hidden space-y-6">
-            <h2 class="text-lg font-semibold text-fls-navy">Pending Approvals</h2>
+            <h2 class="text-lg font-semibold text-fls-navy">Pending Plan Approvals</h2>
             <div id="approvalsContainer" class="space-y-4">
                 <!-- Approval cards will be rendered here -->
             </div>
@@ -69,6 +77,7 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await checkAuth();
+            await loadDateChangeRequests();
             await loadPendingApprovals();
         });
 
@@ -87,6 +96,101 @@
             }
         }
 
+        async function loadDateChangeRequests() {
+            try {
+                const response = await fetch('/api/admin/date-change-requests');
+                if (!response.ok) return; // Not admin or no requests
+
+                const data = await response.json();
+
+                if (data.requests && data.requests.length > 0) {
+                    document.getElementById('dateChangesSection').classList.remove('hidden');
+                    renderDateChangeRequests(data.requests);
+
+                    // Check if we should highlight a specific request
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const highlightId = urlParams.get('date_change');
+                    if (highlightId) {
+                        const card = document.getElementById(`date-change-${highlightId}`);
+                        if (card) {
+                            card.classList.add('ring-2', 'ring-fls-orange');
+                            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load date change requests:', e);
+            }
+        }
+
+        function renderDateChangeRequests(requests) {
+            const container = document.getElementById('dateChangesContainer');
+            container.innerHTML = requests.map(r => `
+                <div id="date-change-${r.id}" class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div class="bg-fls-orange px-6 py-3">
+                        <h3 class="text-white font-semibold">${r.employee_name}</h3>
+                        <p class="text-orange-100 text-sm">Date Change Request</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Current Dates</p>
+                                <p class="font-medium">${r.old_start_date || 'TBD'} - ${r.old_end_date || 'TBD'}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Requested Dates</p>
+                                <p class="font-medium text-fls-orange">${r.new_start_date || 'TBD'} - ${r.new_end_date || 'TBD'}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <p class="text-sm text-gray-500">Reason</p>
+                                <p class="font-medium">${r.reason || 'No reason provided'}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 pt-4 border-t">
+                            <button onclick="processDateChange('${r.id}', 'deny')"
+                                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">
+                                Deny
+                            </button>
+                            <button onclick="processDateChange('${r.id}', 'approve')"
+                                    class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Approve
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function processDateChange(requestId, action) {
+            const actionText = action === 'approve' ? 'approve' : 'deny';
+            if (!confirm(`Are you sure you want to ${actionText} this date change request?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/date-change-requests/${requestId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Date change request ${result.status.toLowerCase()}! The employee has been notified.`);
+                    location.reload();
+                } else {
+                    alert(result.error || 'Failed to process request');
+                }
+            } catch (e) {
+                console.error('Processing failed:', e);
+                alert('Failed to process date change request');
+            }
+        }
+
         async function loadPendingApprovals() {
             try {
                 const response = await fetch('/api/my-approvals');
@@ -94,10 +198,12 @@
 
                 document.getElementById('loadingState').classList.add('hidden');
 
+                const hasDateChanges = !document.getElementById('dateChangesSection').classList.contains('hidden');
+
                 if (data.approvals && data.approvals.length > 0) {
                     document.getElementById('approvalsList').classList.remove('hidden');
                     renderApprovals(data.approvals);
-                } else {
+                } else if (!hasDateChanges) {
                     document.getElementById('noApprovalsState').classList.remove('hidden');
                 }
             } catch (e) {

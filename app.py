@@ -42,6 +42,7 @@ SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 587
 TALENT_TEAM_EMAIL = 'talent@firstlineschools.org'
+SABBATICAL_ADMIN_EMAIL = 'sshirey@firstlineschools.org'  # Additional admin for sabbatical notifications
 HR_EMAIL = 'hr@firstlineschools.org'
 BENEFITS_EMAIL = 'benefits@firstlineschools.org'
 PAYROLL_EMAIL = 'payroll@firstlineschools.org'
@@ -1885,10 +1886,13 @@ def request_date_change():
         bq_client.query(query, job_config=job_config).result()
 
         # Send notification emails
+        portal_url = request.host_url.rstrip('/')
+        approval_link = f"{portal_url}/approvals?date_change={request_id}"
+
         subject = f"Sabbatical Date Change Request - {sabbatical.get('employee_name', '')}"
         html_body = f"""
         <div style="font-family: Arial, sans-serif; max-width: 600px;">
-            <h2>Sabbatical Date Change Request</h2>
+            <h2 style="color: #1e3a5f;">Sabbatical Date Change Request</h2>
             <p><strong>{sabbatical.get('employee_name', '')}</strong> has requested a date change for their sabbatical.</p>
 
             <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
@@ -1898,7 +1902,7 @@ def request_date_change():
                 </tr>
                 <tr>
                     <th style="text-align: left; padding: 8px; background: #f5f5f5;">Requested Dates</th>
-                    <td style="padding: 8px;">{data.get('new_start_date', 'TBD')} - {data.get('new_end_date', 'TBD')}</td>
+                    <td style="padding: 8px; color: #e47727; font-weight: bold;">{data.get('new_start_date', 'TBD')} - {data.get('new_end_date', 'TBD')}</td>
                 </tr>
                 <tr>
                     <th style="text-align: left; padding: 8px; background: #f5f5f5;">Reason</th>
@@ -1906,10 +1910,14 @@ def request_date_change():
                 </tr>
             </table>
 
-            <p>Please review and approve/deny this request in the Sabbatical Portal.</p>
+            <p style="margin-top: 20px;">
+                <a href="{approval_link}" style="background-color: #1e3a5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                    Review Date Change Request
+                </a>
+            </p>
         </div>
         """
-        send_email(TALENT_TEAM_EMAIL, subject, html_body)
+        send_email(TALENT_TEAM_EMAIL, subject, html_body, cc_emails=[SABBATICAL_ADMIN_EMAIL])
 
         # Add activity
         add_activity(application_id, email, user.get('name', ''), 'date_change_requested',
@@ -1919,6 +1927,159 @@ def request_date_change():
     except Exception as e:
         logger.error(f"Error requesting date change: {e}")
         return jsonify({'error': 'Failed to submit request'}), 500
+
+
+@app.route('/api/admin/date-change-requests', methods=['GET'])
+def get_date_change_requests():
+    """Get all pending date change requests (admin only)."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_email = user.get('email', '').lower()
+    if user_email not in [e.lower() for e in ADMIN_USERS]:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    try:
+        date_changes_table = f"{PROJECT_ID}.{DATASET_ID}.date_change_requests"
+        query = f"""
+        SELECT
+            dcr.*,
+            a.employee_name,
+            a.employee_email,
+            a.sabbatical_option
+        FROM `{date_changes_table}` dcr
+        JOIN `{PROJECT_ID}.{DATASET_ID}.applications` a ON dcr.application_id = a.application_id
+        WHERE dcr.status = 'Pending'
+        ORDER BY dcr.requested_at DESC
+        """
+        results = bq_client.query(query).result()
+
+        requests = []
+        for row in results:
+            requests.append({
+                'id': row.id,
+                'application_id': row.application_id,
+                'employee_name': row.employee_name,
+                'employee_email': row.employee_email,
+                'sabbatical_option': row.sabbatical_option,
+                'old_start_date': row.old_start_date.isoformat() if row.old_start_date else None,
+                'old_end_date': row.old_end_date.isoformat() if row.old_end_date else None,
+                'new_start_date': row.new_start_date.isoformat() if row.new_start_date else None,
+                'new_end_date': row.new_end_date.isoformat() if row.new_end_date else None,
+                'reason': row.reason,
+                'requested_at': row.requested_at.isoformat() if row.requested_at else None,
+                'status': row.status
+            })
+
+        return jsonify({'requests': requests})
+    except Exception as e:
+        logger.error(f"Error fetching date change requests: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/admin/date-change-requests/<request_id>', methods=['PATCH'])
+def process_date_change_request(request_id):
+    """Approve or deny a date change request (admin only)."""
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    user_email = user.get('email', '').lower()
+    if user_email not in [e.lower() for e in ADMIN_USERS]:
+        return jsonify({'error': 'Admin access required'}), 403
+
+    data = request.json
+    action = data.get('action')  # 'approve' or 'deny'
+
+    if action not in ['approve', 'deny']:
+        return jsonify({'error': 'Invalid action'}), 400
+
+    try:
+        date_changes_table = f"{PROJECT_ID}.{DATASET_ID}.date_change_requests"
+
+        # Get the date change request
+        query = f"""
+        SELECT * FROM `{date_changes_table}` WHERE id = @request_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("request_id", "STRING", request_id)
+            ]
+        )
+        results = list(bq_client.query(query, job_config=job_config).result())
+
+        if not results:
+            return jsonify({'error': 'Request not found'}), 404
+
+        dcr = results[0]
+
+        if action == 'approve':
+            # Update the application with new dates
+            update_application(dcr.application_id, {
+                'start_date': dcr.new_start_date.isoformat() if dcr.new_start_date else None,
+                'end_date': dcr.new_end_date.isoformat() if dcr.new_end_date else None
+            })
+
+            # Add activity
+            add_activity(dcr.application_id, user_email, user.get('name', ''), 'date_change_approved',
+                        f"Date change approved by {user.get('name', '')}: {dcr.new_start_date} - {dcr.new_end_date}")
+
+            new_status = 'Approved'
+        else:
+            # Add activity for denial
+            add_activity(dcr.application_id, user_email, user.get('name', ''), 'date_change_denied',
+                        f"Date change denied by {user.get('name', '')}")
+
+            new_status = 'Denied'
+
+        # Update the date change request status
+        update_query = f"""
+        UPDATE `{date_changes_table}`
+        SET status = @status, talent_approved = @talent_approved, talent_approved_by = @approved_by, talent_approved_at = @approved_at
+        WHERE id = @request_id
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[
+                bigquery.ScalarQueryParameter("status", "STRING", new_status),
+                bigquery.ScalarQueryParameter("talent_approved", "BOOL", action == 'approve'),
+                bigquery.ScalarQueryParameter("approved_by", "STRING", user_email),
+                bigquery.ScalarQueryParameter("approved_at", "TIMESTAMP", datetime.now()),
+                bigquery.ScalarQueryParameter("request_id", "STRING", request_id)
+            ]
+        )
+        bq_client.query(update_query, job_config=job_config).result()
+
+        # Send notification to employee
+        all_applications = read_all_applications()
+        sabbatical = next((a for a in all_applications if a['application_id'] == dcr.application_id), None)
+
+        if sabbatical:
+            if action == 'approve':
+                subject = f"Sabbatical Date Change Approved"
+                html_body = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                    <h2 style="color: #22c55e;">Date Change Approved</h2>
+                    <p>Your sabbatical date change request has been approved.</p>
+                    <p><strong>New Dates:</strong> {dcr.new_start_date} - {dcr.new_end_date}</p>
+                    <p>Please continue with your sabbatical planning.</p>
+                </div>
+                """
+            else:
+                subject = f"Sabbatical Date Change Request - Update"
+                html_body = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px;">
+                    <h2 style="color: #ef4444;">Date Change Request Denied</h2>
+                    <p>Your sabbatical date change request was not approved at this time.</p>
+                    <p>Please contact the Talent team if you have questions.</p>
+                </div>
+                """
+            send_email(sabbatical.get('employee_email', ''), subject, html_body)
+
+        return jsonify({'success': True, 'status': new_status})
+    except Exception as e:
+        logger.error(f"Error processing date change request: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/my-sabbatical/submit-plan', methods=['POST'])
