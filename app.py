@@ -1297,6 +1297,24 @@ def get_my_sabbatical():
 
     application_id = sabbatical['application_id']
 
+    # Look up years of service from staff table
+    try:
+        yos_query = """
+        SELECT DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), YEAR) as years_of_service
+        FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+        WHERE LOWER(Email_Address) = @email
+        AND Employment_Status IN ('Active', 'Leave of absence')
+        LIMIT 1
+        """
+        yos_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("email", "STRING", primary_email)]
+        )
+        yos_result = list(bq_client.query(yos_query, job_config=yos_config).result())
+        if yos_result:
+            sabbatical['years_of_service'] = yos_result[0].years_of_service
+    except Exception as e:
+        logger.error(f"Error looking up years of service: {e}")
+
     # Get checklist items
     checklist = []
     try:

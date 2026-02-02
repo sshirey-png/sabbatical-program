@@ -718,6 +718,7 @@
             // Employee info
             document.getElementById('employeeName').textContent = s.employee_name;
             document.getElementById('employeeDetails').textContent = s.employee_location || 'FirstLine Schools';
+            document.getElementById('yearsOfService').textContent = s.years_of_service ? `${s.years_of_service} Years of Service` : '';
 
             // Status badge
             const statusBadge = document.getElementById('statusBadge');
