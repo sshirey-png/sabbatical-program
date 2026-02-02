@@ -1917,7 +1917,11 @@ def request_date_change():
             </p>
         </div>
         """
-        send_email(TALENT_TEAM_EMAIL, subject, html_body, cc_emails=[SABBATICAL_ADMIN_EMAIL])
+        # Get supervisor chain emails for CC
+        supervisor_chain = get_supervisor_chain(sabbatical.get('employee_email', ''))
+        cc_list = [SABBATICAL_ADMIN_EMAIL] + [s['email'] for s in supervisor_chain if s.get('email')]
+
+        send_email(TALENT_TEAM_EMAIL, subject, html_body, cc_emails=cc_list)
 
         # Add activity
         add_activity(application_id, email, user.get('name', ''), 'date_change_requested',
@@ -2058,26 +2062,43 @@ def process_date_change_request(request_id):
         sabbatical = next((a for a in all_applications if a['application_id'] == dcr.application_id), None)
 
         if sabbatical:
+            # Get supervisor chain for CC
+            supervisor_chain = get_supervisor_chain(sabbatical.get('employee_email', ''))
+            cc_list = [SABBATICAL_ADMIN_EMAIL, TALENT_TEAM_EMAIL] + [s['email'] for s in supervisor_chain if s.get('email')]
+
+            portal_url = request.host_url.rstrip('/')
+            planning_link = f"{portal_url}/my-sabbatical"
+
             if action == 'approve':
-                subject = f"Sabbatical Date Change Approved"
+                subject = f"Sabbatical Date Change Approved - {sabbatical.get('employee_name', '')}"
                 html_body = f"""
                 <div style="font-family: Arial, sans-serif; max-width: 600px;">
                     <h2 style="color: #22c55e;">Date Change Approved</h2>
-                    <p>Your sabbatical date change request has been approved.</p>
+                    <p><strong>{sabbatical.get('employee_name', '')}'s</strong> sabbatical date change request has been approved.</p>
                     <p><strong>New Dates:</strong> {dcr.new_start_date} - {dcr.new_end_date}</p>
-                    <p>Please continue with your sabbatical planning.</p>
+                    <p>Please continue with sabbatical planning.</p>
+                    <p style="margin-top: 20px;">
+                        <a href="{planning_link}" style="background-color: #1e3a5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Go to My Sabbatical Plan
+                        </a>
+                    </p>
                 </div>
                 """
             else:
-                subject = f"Sabbatical Date Change Request - Update"
+                subject = f"Sabbatical Date Change Request Denied - {sabbatical.get('employee_name', '')}"
                 html_body = f"""
                 <div style="font-family: Arial, sans-serif; max-width: 600px;">
                     <h2 style="color: #ef4444;">Date Change Request Denied</h2>
-                    <p>Your sabbatical date change request was not approved at this time.</p>
+                    <p><strong>{sabbatical.get('employee_name', '')}'s</strong> sabbatical date change request was not approved at this time.</p>
                     <p>Please contact the Talent team if you have questions.</p>
+                    <p style="margin-top: 20px;">
+                        <a href="{planning_link}" style="background-color: #1e3a5f; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                            Go to My Sabbatical Plan
+                        </a>
+                    </p>
                 </div>
                 """
-            send_email(sabbatical.get('employee_email', ''), subject, html_body)
+            send_email(sabbatical.get('employee_email', ''), subject, html_body, cc_emails=cc_list)
 
         return jsonify({'success': True, 'status': new_status})
     except Exception as e:
