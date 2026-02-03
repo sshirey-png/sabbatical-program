@@ -2846,6 +2846,9 @@ def login():
     """Initiate Google OAuth."""
     if not google:
         return jsonify({'error': 'OAuth not configured'}), 500
+    # Remember where to redirect after login
+    next_url = request.args.get('redirect', '/')
+    session['login_next'] = next_url
     redirect_uri = url_for('auth_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
@@ -2869,8 +2872,9 @@ def auth_callback():
                 'is_admin': email in [e.lower() for e in ADMIN_USERS]
             }
 
-        # Redirect back to the app with admin view
-        return redirect('/?admin=true')
+        # Redirect back to where the user came from
+        next_url = session.pop('login_next', '/')
+        return redirect(next_url)
     except Exception as e:
         logger.error(f"OAuth error: {e}")
         return redirect('/?error=auth_failed')
