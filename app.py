@@ -187,7 +187,11 @@ def send_application_confirmation(application):
         </div>
     </div>
     """
-    send_email(application['employee_email'], subject, html_body)
+    # CC the supervisor chain
+    supervisor_chain = get_supervisor_chain(application.get('employee_email', ''))
+    cc_emails = [s.get('email') for s in supervisor_chain if s.get('email')]
+
+    send_email(application['employee_email'], subject, html_body, cc_emails=cc_emails)
 
 
 def send_new_application_alert(application):
@@ -2938,6 +2942,28 @@ def update_application_status(application_id):
     except Exception as e:
         logger.error(f"Error updating application: {e}")
         return jsonify({'error': 'Server error'}), 500
+
+
+@app.route('/api/admin/applications/<application_id>/resend-confirmation', methods=['POST'])
+@require_admin
+def resend_confirmation_email(application_id):
+    """Resend confirmation emails for an application (admin only)."""
+    try:
+        application = get_application_by_id(application_id)
+        if not application:
+            return jsonify({'error': 'Application not found'}), 404
+
+        # Send both emails
+        send_application_confirmation(application)
+        send_new_application_alert(application)
+
+        return jsonify({
+            'success': True,
+            'message': f"Confirmation emails sent for {application.get('employee_name', 'Unknown')}"
+        })
+    except Exception as e:
+        logger.error(f"Error resending confirmation: {e}")
+        return jsonify({'error': 'Failed to send emails'}), 500
 
 
 @app.route('/api/admin/applications/<application_id>', methods=['DELETE'])
