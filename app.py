@@ -46,6 +46,7 @@ SABBATICAL_ADMIN_EMAIL = 'sshirey@firstlineschools.org'  # Additional admin for 
 HR_EMAIL = 'hr@firstlineschools.org'
 BENEFITS_EMAIL = 'benefits@firstlineschools.org'
 PAYROLL_EMAIL = 'payroll@firstlineschools.org'
+CEO_EMAIL = 'spence@firstlineschools.org'
 
 # Admin users who can access the admin panel
 ADMIN_USERS = [
@@ -187,8 +188,8 @@ def send_application_confirmation(application):
         </div>
     </div>
     """
-    # CC the supervisor chain
-    supervisor_chain = get_supervisor_chain(application.get('employee_email', ''))
+    # CC the supervisor chain (CEO only for her direct reports)
+    supervisor_chain = filter_chain_for_notifications(get_supervisor_chain(application.get('employee_email', '')))
     cc_emails = [s.get('email') for s in supervisor_chain if s.get('email')]
 
     send_email(application['employee_email'], subject, html_body, cc_emails=cc_emails)
@@ -326,10 +327,10 @@ def send_status_update(application, old_status, new_status, updated_by, notes=''
         </div>
     </div>
     """
-    # For Tentatively Approved, CC the supervisor chain
+    # For Tentatively Approved, CC the supervisor chain (CEO only for her direct reports)
     cc_emails = None
     if new_status == 'Tentatively Approved':
-        supervisor_chain = get_supervisor_chain(application.get('employee_email', ''))
+        supervisor_chain = filter_chain_for_notifications(get_supervisor_chain(application.get('employee_email', '')))
         cc_emails = [s.get('email') for s in supervisor_chain if s.get('email')]
         # Also CC Talent admin
         cc_emails.append(SABBATICAL_ADMIN_EMAIL)
@@ -395,6 +396,12 @@ def get_supervisor_chain(employee_email):
         return []
 
 
+def filter_chain_for_notifications(chain):
+    """Filter CEO from supervisor chain unless they are a direct report (level 1).
+    CEO should only be notified for her direct reports' sabbaticals."""
+    return [s for s in chain if s.get('email', '').lower() != CEO_EMAIL.lower() or s.get('level') == 1]
+
+
 def get_required_approvers(employee_email):
     """
     Get list of all required approvers for final approval.
@@ -402,8 +409,8 @@ def get_required_approvers(employee_email):
     """
     approvers = []
 
-    # Get supervisor chain
-    chain = get_supervisor_chain(employee_email)
+    # Get supervisor chain (CEO only approves for her direct reports)
+    chain = filter_chain_for_notifications(get_supervisor_chain(employee_email))
     for supervisor in chain:
         approvers.append({
             'email': supervisor['email'],
@@ -2119,8 +2126,8 @@ def request_date_change():
             </p>
         </div>
         """
-        # Get supervisor chain emails for CC
-        supervisor_chain = get_supervisor_chain(sabbatical.get('employee_email', ''))
+        # Get supervisor chain emails for CC (CEO only for her direct reports)
+        supervisor_chain = filter_chain_for_notifications(get_supervisor_chain(sabbatical.get('employee_email', '')))
         cc_list = [SABBATICAL_ADMIN_EMAIL] + [s['email'] for s in supervisor_chain if s.get('email')]
 
         send_email(TALENT_TEAM_EMAIL, subject, html_body, cc_emails=cc_list)
@@ -2264,8 +2271,8 @@ def process_date_change_request(request_id):
         sabbatical = next((a for a in all_applications if a['application_id'] == dcr.application_id), None)
 
         if sabbatical:
-            # Get supervisor chain for CC
-            supervisor_chain = get_supervisor_chain(sabbatical.get('employee_email', ''))
+            # Get supervisor chain for CC (CEO only for her direct reports)
+            supervisor_chain = filter_chain_for_notifications(get_supervisor_chain(sabbatical.get('employee_email', '')))
             cc_list = [SABBATICAL_ADMIN_EMAIL, TALENT_TEAM_EMAIL] + [s['email'] for s in supervisor_chain if s.get('email')]
 
             portal_url = request.host_url.rstrip('/')
@@ -2516,8 +2523,8 @@ def approve_plan():
                 approvers = list(bq_client.query(approvers_query, job_config=job_config).result())
                 approver_names = [a.approver_name for a in approvers]
 
-                # Get supervisor chain for CC
-                supervisor_chain = get_supervisor_chain(sabbatical.get('employee_email', ''))
+                # Get supervisor chain for CC (CEO only for her direct reports)
+                supervisor_chain = filter_chain_for_notifications(get_supervisor_chain(sabbatical.get('employee_email', '')))
                 supervisor_cc = [s.get('email') for s in supervisor_chain if s.get('email')]
 
                 # Determine the plan type display
