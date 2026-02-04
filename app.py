@@ -247,7 +247,7 @@ def send_new_application_alert(application):
         </div>
     </div>
     """
-    send_email(TALENT_TEAM_EMAIL, subject, html_body)
+    send_email(TALENT_TEAM_EMAIL, subject, html_body, cc_emails=[SABBATICAL_ADMIN_EMAIL])
 
 
 def send_status_update(application, old_status, new_status, updated_by, notes=''):
