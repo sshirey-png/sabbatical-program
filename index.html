@@ -603,7 +603,7 @@
                                     Month
                                 </button>
                                 <button onclick="setCalendarView('year')" id="viewYearBtn" class="px-3 py-1 text-sm font-medium rounded-md text-gray-600 hover:text-gray-800">
-                                    Year
+                                    School Year
                                 </button>
                             </div>
                         </div>
@@ -1145,28 +1145,47 @@
             }
         }
 
-        // Render year view
+        // Render school year view (July - June)
         function renderYearView(year, allApps, monthNames) {
-            // Update title
-            document.getElementById('calendarMonthTitle').textContent = `${year}`;
+            // School year runs July of 'year' through June of 'year+1'
+            // e.g., year=2026 shows "2026-2027" (Jul 2026 - Jun 2027)
+            const schoolYearStart = new Date(year, 6, 1);  // July 1
+            const schoolYearEnd = new Date(year + 1, 5, 30);  // June 30 next year
 
-            // Get sabbaticals for this year
+            // Update title to show school year format
+            document.getElementById('calendarMonthTitle').textContent = `${year}-${year + 1}`;
+
+            // Get sabbaticals for this school year
             const apps = allApps.filter(app => {
                 if (!app.start_date || !app.end_date) return false;
                 const start = new Date(app.start_date);
                 const end = new Date(app.end_date);
-                const yearStart = new Date(year, 0, 1);
-                const yearEnd = new Date(year, 11, 31);
-                return start <= yearEnd && end >= yearStart;
+                return start <= schoolYearEnd && end >= schoolYearStart;
             });
 
-            // Build year grid (4 rows x 3 columns of months)
+            // Build school year grid (July through June)
             const grid = document.getElementById('calendarGrid');
             let html = '';
 
-            for (let m = 0; m < 12; m++) {
-                const monthStart = new Date(year, m, 1);
-                const monthEnd = new Date(year, m + 1, 0);
+            // School year months: Jul(6), Aug(7), Sep(8), Oct(9), Nov(10), Dec(11), Jan(0), Feb(1), Mar(2), Apr(3), May(4), Jun(5)
+            const schoolYearMonths = [
+                { month: 6, year: year },      // July
+                { month: 7, year: year },      // August
+                { month: 8, year: year },      // September
+                { month: 9, year: year },      // October
+                { month: 10, year: year },     // November
+                { month: 11, year: year },     // December
+                { month: 0, year: year + 1 },  // January (next year)
+                { month: 1, year: year + 1 },  // February
+                { month: 2, year: year + 1 },  // March
+                { month: 3, year: year + 1 },  // April
+                { month: 4, year: year + 1 },  // May
+                { month: 5, year: year + 1 },  // June
+            ];
+
+            for (const { month: m, year: y } of schoolYearMonths) {
+                const monthStart = new Date(y, m, 1);
+                const monthEnd = new Date(y, m + 1, 0);
 
                 // Count sabbaticals this month
                 const monthApps = apps.filter(app => {
@@ -1175,12 +1194,13 @@
                     return start <= monthEnd && end >= monthStart;
                 });
 
-                const isCurrentMonth = new Date().getFullYear() === year && new Date().getMonth() === m;
+                const now = new Date();
+                const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m;
 
                 html += `
                     <div class="p-3 border rounded-lg ${isCurrentMonth ? 'bg-blue-50 border-blue-300' : 'bg-white'} cursor-pointer hover:shadow-md transition-shadow"
-                         onclick="currentCalendarDate = new Date(${year}, ${m}, 1); setCalendarView('month');">
-                        <div class="font-semibold text-sm ${isCurrentMonth ? 'text-blue-700' : 'text-gray-700'} mb-2">${monthNames[m]}</div>
+                         onclick="currentCalendarDate = new Date(${y}, ${m}, 1); setCalendarView('month');">
+                        <div class="font-semibold text-sm ${isCurrentMonth ? 'text-blue-700' : 'text-gray-700'} mb-2">${monthNames[m]}${m <= 5 ? " '" + String(y).slice(-2) : ''}</div>
                         <div class="space-y-1">
                             ${monthApps.slice(0, 4).map(app => `
                                 <div class="flex items-center gap-1">
@@ -1199,8 +1219,8 @@
             grid.className = 'grid grid-cols-3 sm:grid-cols-4 gap-3 p-2';
             grid.innerHTML = html;
 
-            // Render list of all sabbaticals this year
-            document.getElementById('calendarListTitle').textContent = 'Sabbaticals This Year';
+            // Render list of all sabbaticals this school year
+            document.getElementById('calendarListTitle').textContent = `Sabbaticals ${year}-${year + 1}`;
             const listDiv = document.getElementById('calendarList');
             if (apps.length > 0) {
                 listDiv.innerHTML = apps.sort((a, b) => a.start_date.localeCompare(b.start_date)).map(app => `
@@ -1216,7 +1236,7 @@
                     </div>
                 `).join('');
             } else {
-                listDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No sabbaticals scheduled this year.</p>';
+                listDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No sabbaticals scheduled this school year.</p>';
             }
         }
 
