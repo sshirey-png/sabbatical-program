@@ -72,11 +72,20 @@
                     </a>
                     <div id="userInfo" class="hidden items-center gap-3">
                         <span id="userName" class="text-sm text-white"></span>
+                        <!-- View Toggle for Admins -->
+                        <div id="viewToggle" class="hidden flex bg-white/10 rounded-lg p-1">
+                            <button id="staffViewBtn" onclick="showStaffView()" class="px-3 py-1 text-sm font-medium rounded-md bg-white text-fls-navy">
+                                Staff View
+                            </button>
+                            <button id="adminViewBtn" onclick="showAdminView()" class="px-3 py-1 text-sm font-medium rounded-md text-white hover:bg-white/20">
+                                Admin View
+                            </button>
+                        </div>
                         <a href="/my-sabbatical" id="mySabbaticalLink" class="hidden inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white/20 text-white hover:bg-white/30 rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
                             </svg>
-                            My Sabbatical Plan
+                            My Sabbatical
                         </a>
                         <a href="/logout" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-fls-blue rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -470,17 +479,12 @@
                     <p class="text-gray-600">Manage and review sabbatical applications</p>
                     <p id="accessIndicator" class="hidden text-sm font-medium text-fls-orange mt-1"></p>
                 </div>
-                <div class="flex gap-2">
-                    <a href="/approvals" class="bg-fls-orange hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Pending Approvals
-                    </a>
-                    <button onclick="showStaffView()" class="bg-fls-navy hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm">
-                        ← Back to Staff View
-                    </button>
-                </div>
+                <a href="/approvals" class="bg-fls-orange hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Pending Approvals
+                </a>
             </div>
 
             <!-- Stats Cards -->
@@ -708,6 +712,9 @@
                     if (data.is_admin) {
                         isAdmin = true;
                         adminAccess = data.admin_access || { level: 'network' };
+                        // Show view toggle for admins
+                        document.getElementById('viewToggle').classList.remove('hidden');
+                        document.getElementById('viewToggle').classList.add('flex');
                     }
 
                     // Show lookup form and hide sign-in prompt
@@ -1378,6 +1385,10 @@
             document.getElementById('staffView').classList.add('hidden');
             document.getElementById('adminView').classList.remove('hidden');
 
+            // Update toggle button styles
+            document.getElementById('staffViewBtn').className = 'px-3 py-1 text-sm font-medium rounded-md text-white hover:bg-white/20';
+            document.getElementById('adminViewBtn').className = 'px-3 py-1 text-sm font-medium rounded-md bg-white text-fls-navy';
+
             await loadAdminData();
         }
 
@@ -1385,6 +1396,10 @@
         function showStaffView() {
             document.getElementById('staffView').classList.remove('hidden');
             document.getElementById('adminView').classList.add('hidden');
+
+            // Update toggle button styles
+            document.getElementById('staffViewBtn').className = 'px-3 py-1 text-sm font-medium rounded-md bg-white text-fls-navy';
+            document.getElementById('adminViewBtn').className = 'px-3 py-1 text-sm font-medium rounded-md text-white hover:bg-white/20';
         }
 
         // Load admin data
