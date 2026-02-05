@@ -56,6 +56,7 @@ SABBATICAL_NETWORK_ADMINS = [
     'brichardson@firstlineschools.org',  # Chief of Human Resources
     'spence@firstlineschools.org',       # CEO
     'sdomango@firstlineschools.org',     # Chief Experience Officer
+    'dcavato@firstlineschools.org',      # C-Team
     # HR/Talent Team
     'talent@firstlineschools.org',
     'hr@firstlineschools.org',
@@ -112,7 +113,7 @@ def get_sabbatical_admin_access(email):
     if email_lower in [e.lower() for e in SABBATICAL_NETWORK_ADMINS]:
         return {'level': 'network'}
 
-    # 2. Check if school leader (by job title)
+    # 2. Check job title for C-Team or school leader access
     try:
         query = """
         SELECT Job_Title, Location_Name
@@ -129,6 +130,10 @@ def get_sabbatical_admin_access(email):
         if results:
             job_title = (results[0].Job_Title or '').lower()
             location = results[0].Location_Name or ''
+
+            # Check if C-Team (Chief or Executive Director)
+            if 'chief' in job_title or 'ex dir' in job_title or 'executive dir' in job_title:
+                return {'level': 'network'}
 
             # Check if job title matches school leader patterns
             for leader_title in SABBATICAL_SCHOOL_LEADER_TITLES:
