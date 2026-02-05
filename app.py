@@ -2287,6 +2287,11 @@ def process_date_change_request(request_id):
     if action not in ['approve', 'deny']:
         return jsonify({'error': 'Invalid action'}), 400
 
+    user = session.get('user')
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+    user_email = user.get('email', '')
+
     try:
         date_changes_table = f"{PROJECT_ID}.{DATASET_ID}.date_change_requests"
 

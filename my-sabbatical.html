@@ -73,6 +73,12 @@
                 <div id="authSection" class="flex items-center gap-3">
                     <div id="userInfo" class="flex items-center gap-3">
                         <span id="userName" class="text-sm text-white hidden sm:inline"></span>
+                        <a href="/?admin=true" id="backToAdminLink" class="hidden inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white text-fls-navy hover:bg-gray-100 rounded-lg transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                            <span class="hidden sm:inline">Back to Admin</span>
+                        </a>
                         <a href="/approvals" id="approvalsLink" class="hidden inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-fls-orange hover:bg-orange-600 text-white rounded-lg transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -756,16 +762,19 @@
                     messagesData = data.messages || [];
                     historyData = data.history || [];
 
-                    // Show admin viewing banner if applicable
+                    // Show admin viewing banner and back button if applicable
                     if (data.viewing_as_admin) {
+                        // Show back to admin button in header
+                        document.getElementById('backToAdminLink').classList.remove('hidden');
+
+                        // Also show banner below header
                         const banner = document.createElement('div');
-                        banner.className = 'bg-purple-600 text-white px-4 py-3 text-center';
+                        banner.className = 'bg-purple-600 text-white px-4 py-3 text-center mt-16';
                         banner.innerHTML = `
                             <span class="font-medium">Admin View:</span> Viewing sabbatical planning for
                             <strong>${sabbaticalData.employee_name}</strong>
-                            <a href="/?admin=true" class="ml-4 underline">← Back to Admin</a>
                         `;
-                        document.body.insertBefore(banner, document.body.firstChild);
+                        document.querySelector('main').insertBefore(banner, document.querySelector('main').firstChild);
                     }
 
                     renderSabbaticalContent();
