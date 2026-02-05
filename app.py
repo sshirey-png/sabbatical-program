@@ -48,16 +48,34 @@ BENEFITS_EMAIL = 'benefits@firstlineschools.org'
 PAYROLL_EMAIL = 'payroll@firstlineschools.org'
 CEO_EMAIL = 'spence@firstlineschools.org'
 
-# Admin users who can access the admin panel
-ADMIN_USERS = [
-    'sshirey@firstlineschools.org',
-    'brichardson@firstlineschools.org',
+# Network-level admins - can see ALL sabbatical applications
+# This includes C-Team, HR leadership, and ExDir of Teaching and Learning
+SABBATICAL_NETWORK_ADMINS = [
+    # C-Team
+    'sshirey@firstlineschools.org',      # Chief People Officer
+    'brichardson@firstlineschools.org',  # Chief of Human Resources
+    'spence@firstlineschools.org',       # CEO
+    'sdomango@firstlineschools.org',     # Chief Experience Officer
+    # HR/Talent Team
     'talent@firstlineschools.org',
     'hr@firstlineschools.org',
     'awatts@firstlineschools.org',
     'jlombas@firstlineschools.org',
-    'tcole@firstlineschools.org'
+    'tcole@firstlineschools.org',
+    # Academic Leadership
+    'kfeil@firstlineschools.org',        # ExDir of Teaching and Learning
 ]
+
+# Job titles that grant school-level admin access (can see their school's applications)
+SABBATICAL_SCHOOL_LEADER_TITLES = [
+    'school director',
+    'principal',
+    'assistant principal',
+    'head of school',
+]
+
+# Legacy ADMIN_USERS for backward compatibility
+ADMIN_USERS = SABBATICAL_NETWORK_ADMINS
 
 # Email aliases - map alternative emails to primary FirstLine emails
 # Format: 'alternate@email.com': 'primary@firstlineschools.org'
@@ -74,6 +92,52 @@ def resolve_email_alias(email):
     if not email:
         return email
     return EMAIL_ALIASES.get(email.lower(), email)
+
+
+def get_sabbatical_admin_access(email):
+    """
+    Determine the user's admin access level for the sabbatical program.
+
+    Returns a dict with:
+    - {'level': 'network'} - Can see all applications across the network
+    - {'level': 'school', 'school': 'Location Name'} - Can see their school's applications
+    - {'level': 'none'} - No admin access
+    """
+    if not email:
+        return {'level': 'none'}
+
+    email_lower = email.lower()
+
+    # 1. Check if network-level admin (C-Team, HR, kfeil)
+    if email_lower in [e.lower() for e in SABBATICAL_NETWORK_ADMINS]:
+        return {'level': 'network'}
+
+    # 2. Check if school leader (by job title)
+    try:
+        query = """
+        SELECT Job_Title, Location_Name
+        FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+        WHERE LOWER(Email_Address) = @email
+        AND Employment_Status IN ('Active', 'Leave of absence')
+        LIMIT 1
+        """
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=[bigquery.ScalarQueryParameter("email", "STRING", email_lower)]
+        )
+        results = list(bq_client.query(query, job_config=job_config).result())
+
+        if results:
+            job_title = (results[0].Job_Title or '').lower()
+            location = results[0].Location_Name or ''
+
+            # Check if job title matches school leader patterns
+            for leader_title in SABBATICAL_SCHOOL_LEADER_TITLES:
+                if leader_title in job_title:
+                    return {'level': 'school', 'school': location}
+    except Exception as e:
+        logger.error(f"Error checking sabbatical admin access: {e}")
+
+    return {'level': 'none'}
 
 
 # Status values and their display order
@@ -736,14 +800,39 @@ def update_application(application_id, updates):
 
 
 def require_admin(f):
-    """Decorator to require admin authentication."""
+    """
+    Decorator to require admin authentication (network OR school-level).
+    Use require_network_admin for operations that need full network access.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = session.get('user')
         if not user:
             return jsonify({'error': 'Authentication required'}), 401
-        if user.get('email', '').lower() not in [e.lower() for e in ADMIN_USERS]:
+
+        access = get_sabbatical_admin_access(user.get('email', ''))
+        if access['level'] == 'none':
             return jsonify({'error': 'Admin access required'}), 403
+
+        # Store access info for use in the route
+        user['admin_access'] = access
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def require_network_admin(f):
+    """Decorator to require network-level admin authentication (full access)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = session.get('user')
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        access = get_sabbatical_admin_access(user.get('email', ''))
+        if access['level'] != 'network':
+            return jsonify({'error': 'Network admin access required'}), 403
+
+        user['admin_access'] = access
         return f(*args, **kwargs)
     return decorated_function
 
@@ -2143,15 +2232,9 @@ def request_date_change():
 
 
 @app.route('/api/admin/date-change-requests', methods=['GET'])
+@require_network_admin
 def get_date_change_requests():
-    """Get all pending date change requests (admin only)."""
-    user = session.get('user')
-    if not user:
-        return jsonify({'error': 'Authentication required'}), 401
-
-    user_email = user.get('email', '').lower()
-    if user_email not in [e.lower() for e in ADMIN_USERS]:
-        return jsonify({'error': 'Admin access required'}), 403
+    """Get all pending date change requests (network admin only)."""
 
     try:
         date_changes_table = f"{PROJECT_ID}.{DATASET_ID}.date_change_requests"
@@ -2195,16 +2278,9 @@ def get_date_change_requests():
 
 
 @app.route('/api/admin/date-change-requests/<request_id>', methods=['PATCH'])
+@require_network_admin
 def process_date_change_request(request_id):
-    """Approve or deny a date change request (admin only)."""
-    user = session.get('user')
-    if not user:
-        return jsonify({'error': 'Authentication required'}), 401
-
-    user_email = user.get('email', '').lower()
-    if user_email not in [e.lower() for e in ADMIN_USERS]:
-        return jsonify({'error': 'Admin access required'}), 403
-
+    """Approve or deny a date change request (network admin only)."""
     data = request.json
     action = data.get('action')  # 'approve' or 'deny'
 
@@ -2892,13 +2968,15 @@ def auth_status():
     """Check authentication status."""
     user = session.get('user')
     if user:
-        is_admin = user.get('email', '').lower() in [e.lower() for e in ADMIN_USERS]
+        access = get_sabbatical_admin_access(user.get('email', ''))
+        is_admin = access['level'] != 'none'  # Any admin level counts
         return jsonify({
             'authenticated': True,
             'is_admin': is_admin,
+            'admin_access': access,  # 'network', 'school', or 'none'
             'user': user
         })
-    return jsonify({'authenticated': False, 'is_admin': False})
+    return jsonify({'authenticated': False, 'is_admin': False, 'admin_access': {'level': 'none'}})
 
 
 # ============ Admin Routes ============
@@ -2906,15 +2984,27 @@ def auth_status():
 @app.route('/api/admin/applications', methods=['GET'])
 @require_admin
 def get_all_applications():
-    """Get all applications (admin only)."""
+    """Get applications based on admin access level."""
+    user = session.get('user', {})
+    access = user.get('admin_access', get_sabbatical_admin_access(user.get('email', '')))
+
     applications = read_all_applications()
-    return jsonify({'applications': applications})
+
+    # Filter by school if school-level admin
+    if access['level'] == 'school':
+        school = access.get('school', '').lower()
+        applications = [
+            a for a in applications
+            if (a.get('employee_location', '') or '').lower() == school
+        ]
+
+    return jsonify({'applications': applications, 'access': access})
 
 
 @app.route('/api/admin/applications/<application_id>', methods=['PATCH'])
-@require_admin
+@require_network_admin
 def update_application_status(application_id):
-    """Update an application (admin only)."""
+    """Update an application (network admin only)."""
     try:
         data = request.json
         user = session.get('user', {})
@@ -2956,9 +3046,9 @@ def update_application_status(application_id):
 
 
 @app.route('/api/admin/applications/<application_id>/resend-confirmation', methods=['POST'])
-@require_admin
+@require_network_admin
 def resend_confirmation_email(application_id):
-    """Resend confirmation emails for an application (admin only)."""
+    """Resend confirmation emails for an application (network admin only)."""
     try:
         application = get_application_by_id(application_id)
         if not application:
@@ -2978,9 +3068,9 @@ def resend_confirmation_email(application_id):
 
 
 @app.route('/api/admin/applications/<application_id>', methods=['DELETE'])
-@require_admin
+@require_network_admin
 def delete_application_admin(application_id):
-    """Delete an application (admin only)."""
+    """Delete an application (network admin only)."""
     try:
         user = session.get('user', {})
 
@@ -3013,8 +3103,19 @@ def delete_application_admin(application_id):
 @app.route('/api/admin/stats', methods=['GET'])
 @require_admin
 def get_stats():
-    """Get dashboard statistics (admin only)."""
+    """Get dashboard statistics based on admin access level."""
+    user = session.get('user', {})
+    access = user.get('admin_access', get_sabbatical_admin_access(user.get('email', '')))
+
     applications = read_all_applications()
+
+    # Filter by school if school-level admin
+    if access['level'] == 'school':
+        school = access.get('school', '').lower()
+        applications = [
+            a for a in applications
+            if (a.get('employee_location', '') or '').lower() == school
+        ]
 
     total = len(applications)
     submitted = len([a for a in applications if a.get('status') == 'Submitted'])
@@ -3033,7 +3134,8 @@ def get_stats():
         'approved': approved,
         'completed': completed,
         'denied': denied,
-        'withdrawn': withdrawn
+        'withdrawn': withdrawn,
+        'access': access
     })
 
 

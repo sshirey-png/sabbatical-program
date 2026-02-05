@@ -468,6 +468,7 @@
                 <div>
                     <h1 class="text-2xl font-bold text-fls-navy">Sabbatical Applications</h1>
                     <p class="text-gray-600">Manage and review sabbatical applications</p>
+                    <p id="accessIndicator" class="hidden text-sm font-medium text-fls-orange mt-1"></p>
                 </div>
                 <div class="flex gap-2">
                     <a href="/approvals" class="bg-fls-orange hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
@@ -677,6 +678,7 @@
     <script>
         let allApplications = [];
         let isAdmin = false;
+        let adminAccess = { level: 'none' };
         let currentUser = null;
 
         // Initialize
@@ -705,6 +707,7 @@
 
                     if (data.is_admin) {
                         isAdmin = true;
+                        adminAccess = data.admin_access || { level: 'network' };
                     }
 
                     // Show lookup form and hide sign-in prompt
@@ -1371,6 +1374,11 @@
                 const statsResponse = await fetch('/api/admin/stats');
                 const stats = await statsResponse.json();
 
+                // Update access level from response
+                if (stats.access) {
+                    adminAccess = stats.access;
+                }
+
                 document.getElementById('statTotal').textContent = stats.total;
                 document.getElementById('statSubmitted').textContent = stats.submitted;
                 document.getElementById('statTentativelyApproved').textContent = stats.tentatively_approved;
@@ -1379,6 +1387,18 @@
                 document.getElementById('statCompleted').textContent = stats.completed;
                 document.getElementById('statDenied').textContent = stats.denied;
                 document.getElementById('statWithdrawn').textContent = stats.withdrawn;
+
+                // Show access level indicator
+                const accessIndicator = document.getElementById('accessIndicator');
+                if (accessIndicator) {
+                    if (adminAccess.level === 'school') {
+                        accessIndicator.textContent = `Viewing: ${adminAccess.school}`;
+                        accessIndicator.classList.remove('hidden');
+                    } else if (adminAccess.level === 'network') {
+                        accessIndicator.textContent = 'Viewing: All Schools (Network Admin)';
+                        accessIndicator.classList.remove('hidden');
+                    }
+                }
 
                 // Load applications
                 const appsResponse = await fetch('/api/admin/applications');
@@ -1508,7 +1528,8 @@
                         </div>
                     </div>
 
-                    <!-- Status Update -->
+                    <!-- Status Update (Network Admin Only) -->
+                    ${adminAccess.level === 'network' ? `
                     <div class="bg-yellow-50 rounded-lg p-4">
                         <h3 class="font-semibold text-fls-navy mb-3">Update Status</h3>
                         <div class="flex flex-col sm:flex-row gap-4 items-start">
@@ -1538,6 +1559,20 @@
                         </div>
                         ` : ''}
                     </div>
+                    ` : `
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="font-semibold text-fls-navy mb-2">Current Status</h3>
+                        <div class="flex items-center gap-3">
+                            <span class="px-4 py-2 rounded-full text-sm font-medium ${getStatusClass(app.status)}">${app.status}</span>
+                            ${app.status_updated_by ? `
+                            <span class="text-xs text-gray-500">
+                                Updated by ${app.status_updated_by} on ${formatDate(app.status_updated_at)}
+                            </span>
+                            ` : ''}
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2">Contact a network administrator to change the status of this application.</p>
+                    </div>
+                    `}
                 </div>
             `;
 
