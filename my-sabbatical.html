@@ -165,12 +165,20 @@
 
                 <!-- Request Date Change Button -->
                 <div class="mt-4 flex justify-between items-center">
-                    <button onclick="openDateChangeModal()" class="text-fls-blue hover:text-fls-navy text-sm font-medium flex items-center gap-1">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                        </svg>
-                        Request Date Change
-                    </button>
+                    <div class="flex items-center gap-4">
+                        <button onclick="openDateChangeModal()" class="text-fls-blue hover:text-fls-navy text-sm font-medium flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Request Date Change
+                        </button>
+                        <a id="addToCalendarBtn" href="#" target="_blank" class="hidden bg-fls-navy hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                            Add to Google Calendar
+                        </a>
+                    </div>
                     <!-- Submit Plan Button (only for Tentatively Approved) -->
                     <button id="submitPlanBtn" onclick="submitPlanForApproval()" class="hidden bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -848,6 +856,13 @@
                         document.getElementById('daysUntilLabel').textContent = 'complete!';
                     }
                 }
+            }
+
+            // Set up Google Calendar link
+            if (s.start_date && s.end_date) {
+                const calendarBtn = document.getElementById('addToCalendarBtn');
+                calendarBtn.href = generateGoogleCalendarUrl(s);
+                calendarBtn.classList.remove('hidden');
             }
 
             // Show/hide submit plan button based on status
@@ -1687,6 +1702,28 @@
             if (!dateStr) return '';
             const date = new Date(dateStr);
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        // Generate Google Calendar URL for a sabbatical
+        function generateGoogleCalendarUrl(s) {
+            if (!s.start_date || !s.end_date) return '#';
+
+            // Format dates for Google Calendar (YYYYMMDD format, all-day event)
+            const startDate = s.start_date.replace(/-/g, '');
+            // End date needs to be the day AFTER for all-day events in Google Calendar
+            const endDateObj = new Date(s.end_date);
+            endDateObj.setDate(endDateObj.getDate() + 1);
+            const endDate = endDateObj.toISOString().split('T')[0].replace(/-/g, '');
+
+            const title = encodeURIComponent(`Sabbatical: ${s.employee_name}`);
+            const details = encodeURIComponent(
+                `Employee: ${s.employee_name}\n` +
+                `Email: ${s.employee_email}\n` +
+                `Location: ${s.employee_location || 'Not specified'}`
+            );
+            const location = encodeURIComponent(s.employee_location || 'FirstLine Schools');
+
+            return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
         }
 
         // Submit plan for final approval
