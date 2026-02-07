@@ -547,6 +547,53 @@ Deploy the changes to Cloud Run
 
 ---
 
+## Migration / Portability
+
+This application is designed to be easily migrated to a different GCP project. All GCP project references are centralized in `app.py`.
+
+### To Migrate to a New GCP Project
+
+1. **Copy BigQuery datasets** to the new project:
+   ```bash
+   # Copy sabbatical dataset
+   bq cp talent-demo-482004:sabbatical new-project:sabbatical
+
+   # Copy staff data (if not already in new project)
+   bq cp talent-demo-482004:talent_grow_observations new-project:talent_grow_observations
+   ```
+   Or use the BigQuery Console: Dataset → Copy Dataset
+
+2. **Update app.py** - Change the default project ID:
+   ```python
+   PROJECT_ID = os.environ.get('GOOGLE_CLOUD_PROJECT', 'new-project-id')
+   ```
+   Or set the `GOOGLE_CLOUD_PROJECT` environment variable in Cloud Run.
+
+3. **Enable required APIs** in the new project:
+   - BigQuery API
+   - Cloud Run API
+   - Secret Manager API (for OAuth and SMTP credentials)
+
+4. **Set up service account** with BigQuery access
+
+5. **Deploy to Cloud Run** in the new project:
+   ```bash
+   gcloud run deploy sabbatical-program --source . --region us-central1 --project new-project-id --allow-unauthenticated
+   ```
+
+6. **Update OAuth redirect URIs** in Google Cloud Console to include the new Cloud Run URL
+
+### Configuration Locations
+
+| Setting | Location | What to Change |
+|---------|----------|----------------|
+| GCP Project | app.py | `PROJECT_ID` default value |
+| BigQuery Dataset | app.py | `DATASET_ID` variable |
+| OAuth credentials | Cloud Run env vars or Secret Manager |
+| SMTP credentials | Cloud Run env vars |
+
+---
+
 ## Quick Reference
 
 ### Important URLs
