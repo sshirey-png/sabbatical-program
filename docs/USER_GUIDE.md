@@ -147,6 +147,14 @@ When admins view someone else's sabbatical planning page:
 - See all approved sabbaticals across the organization
 - Identify potential scheduling conflicts
 
+### Add to Google Calendar
+Click on any sabbatical (from Admin View, Calendar View, or My Sabbatical page) to see the **Add to Google Calendar** button. This opens Google Calendar with the sabbatical dates pre-filled, allowing you to:
+- Save it to your personal calendar
+- Share it with specific people or groups
+- Add it to a shared team calendar (e.g., School Leaders calendar)
+
+The calendar event includes the employee name, email, and location.
+
 ### Approving Date Change Requests
 When an employee requests a date change:
 1. You'll receive an email notification
