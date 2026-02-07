@@ -115,9 +115,9 @@ def get_sabbatical_admin_access(email):
 
     # 2. Check job title for C-Team or school leader access
     try:
-        query = """
+        query = f"""
         SELECT Job_Title, Location_Name
-        FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+        FROM `{PROJECT_ID}.talent_grow_observations.staff_master_list_with_function`
         WHERE LOWER(Email_Address) = @email
         AND Employment_Status IN ('Active', 'Leave of absence')
         LIMIT 1
@@ -415,7 +415,7 @@ def get_supervisor_chain(employee_email):
     Returns list of dicts with supervisor name, email, and level.
     """
     try:
-        query = """
+        query = f"""
         WITH RECURSIVE supervisor_chain AS (
             -- Base case: the employee
             SELECT
@@ -423,7 +423,7 @@ def get_supervisor_chain(employee_email):
                 CONCAT(First_Name, ' ', Last_Name) as name,
                 Supervisor_Name__Unsecured_ as supervisor_name,
                 0 as level
-            FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+            FROM `{PROJECT_ID}.talent_grow_observations.staff_master_list_with_function`
             WHERE LOWER(Email_Address) = LOWER(@employee_email)
             AND Employment_Status IN ('Active', 'Leave of absence')
 
@@ -435,7 +435,7 @@ def get_supervisor_chain(employee_email):
                 CONCAT(s.First_Name, ' ', s.Last_Name) as name,
                 s.Supervisor_Name__Unsecured_ as supervisor_name,
                 sc.level + 1 as level
-            FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function` s
+            FROM `{PROJECT_ID}.talent_grow_observations.staff_master_list_with_function` s
             INNER JOIN supervisor_chain sc
                 ON s.Employee_Name__Last_Suffix__First_MI_ = sc.supervisor_name
             WHERE s.Employment_Status IN ('Active', 'Leave of absence')
@@ -984,7 +984,7 @@ def lookup_staff():
             Last_Hire_Date,
             Employment_Status,
             DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), YEAR) as years_of_service
-        FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+        FROM `{PROJECT_ID}.talent_grow_observations.staff_master_list_with_function`
         WHERE LOWER(Email_Address) = @email
         AND (Employment_Status IS NULL OR Employment_Status != 'Terminated')
         LIMIT 1
@@ -1419,9 +1419,9 @@ def get_my_sabbatical():
 
     # Look up years of service from staff table
     try:
-        yos_query = """
+        yos_query = f"""
         SELECT DATE_DIFF(CURRENT_DATE(), DATE(Last_Hire_Date), YEAR) as years_of_service
-        FROM `talent-demo-482004.talent_grow_observations.staff_master_list_with_function`
+        FROM `{PROJECT_ID}.talent_grow_observations.staff_master_list_with_function`
         WHERE LOWER(Email_Address) = @email
         AND Employment_Status IN ('Active', 'Leave of absence')
         LIMIT 1
