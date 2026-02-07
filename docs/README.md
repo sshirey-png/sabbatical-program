@@ -27,14 +27,12 @@ This folder contains documentation for the FirstLine Schools Sabbatical Program 
 | Admin | Network Admins, School Leaders | Manage applications |
 | My Sabbatical | Approved applicants + supervisors | Planning & tracking |
 
-### Network Admins
-- sshirey@firstlineschools.org (Chief People Officer)
-- brichardson@firstlineschools.org (Chief of Human Resources)
-- spence@firstlineschools.org (CEO)
-- sdomango@firstlineschools.org (Chief Experience Officer)
+### Network Admins (Auto-detected)
+- Anyone with "Chief" in job title (C-Team)
+- Anyone with "Ex Dir" in job title
 - talent@firstlineschools.org
 - hr@firstlineschools.org
-- kfeil@firstlineschools.org (ExDir of Teaching and Learning)
+- HR/Talent team members (explicitly listed in app.py)
 
 ### School Leaders (Auto-detected by title)
 - School Director

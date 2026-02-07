@@ -218,6 +218,10 @@ If something breaks, you can rollback in Google Cloud Console:
 
 ### Adding a Network Admin
 
+**Note:** C-Team members are auto-detected by job title. Anyone with "Chief" or "Ex Dir" in their title automatically gets network admin access - no manual addition needed.
+
+For non-C-Team admins (HR/Talent team, etc.):
+
 **File:** `app.py`
 **Location:** `SABBATICAL_NETWORK_ADMINS` list
 

@@ -168,15 +168,16 @@ When an employee submits their plan:
 
 ### Network Admins (Full Access)
 
-| Email | Name | Role |
-|-------|------|------|
-| sshirey@firstlineschools.org | Scott Shirey | Chief People Officer |
-| brichardson@firstlineschools.org | Brittney Richardson | Chief of Human Resources |
-| spence@firstlineschools.org | Sabrina Pence | CEO |
-| sdomango@firstlineschools.org | Sivi Domango | Chief Experience Officer |
-| talent@firstlineschools.org | Talent Team | |
-| hr@firstlineschools.org | HR Team | |
-| kfeil@firstlineschools.org | K. Feil | ExDir of Teaching and Learning |
+Network admin access is granted to:
+
+**Auto-detected by job title:**
+- Any title containing "Chief" (C-Team)
+- Any title containing "Ex Dir" or "Executive Dir"
+
+**Explicitly listed:**
+- talent@firstlineschools.org (Talent Team)
+- hr@firstlineschools.org (HR Team)
+- HR/Talent team members
 
 ### School-Level Access
 School leaders automatically get read-only access to applications from their school:
