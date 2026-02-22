@@ -48,22 +48,23 @@ BENEFITS_EMAIL = 'benefits@firstlineschools.org'
 PAYROLL_EMAIL = 'payroll@firstlineschools.org'
 CEO_EMAIL = 'spence@firstlineschools.org'
 
-# Network-level admins - can see ALL sabbatical applications
-# This includes C-Team, HR leadership, and ExDir of Teaching and Learning
-SABBATICAL_NETWORK_ADMINS = [
-    # C-Team
-    'sshirey@firstlineschools.org',      # Chief People Officer
-    'brichardson@firstlineschools.org',  # Chief of Human Resources
-    'spence@firstlineschools.org',       # CEO
-    'sdomango@firstlineschools.org',     # Chief Experience Officer
-    'dcavato@firstlineschools.org',      # C-Team
-    # HR/Talent Team
+# Network admin access by job title (from BigQuery staff_master_list_with_function)
+SABBATICAL_NETWORK_ADMIN_TITLES = [
+    'Chief People Officer',
+    'Chief Executive Officer',
+    'Chief HR Officer',
+    'Chief Experience Officer',
+    'Chief Operating Officer',
+    'Chief Strat Adv Officer',
+    'ExDir of Teach and Learn',
+    'Talent Operations Manager',
+    'Recruitment Manager',
+]
+
+# Team inbox exceptions — shared accounts without BigQuery profiles
+SABBATICAL_ADMIN_EXCEPTIONS = [
     'talent@firstlineschools.org',
     'hr@firstlineschools.org',
-    'awatts@firstlineschools.org',
-    'jlombas@firstlineschools.org',
-    # Academic Leadership
-    'kfeil@firstlineschools.org',        # ExDir of Teaching and Learning
 ]
 
 # Job titles that grant school-level admin access (can see their school's applications)
@@ -73,9 +74,6 @@ SABBATICAL_SCHOOL_LEADER_TITLES = [
     'assistant principal',
     'head of school',
 ]
-
-# Legacy ADMIN_USERS for backward compatibility
-ADMIN_USERS = SABBATICAL_NETWORK_ADMINS
 
 # Email aliases - map alternative emails to primary FirstLine emails
 # Format: 'alternate@email.com': 'primary@firstlineschools.org'
@@ -108,11 +106,11 @@ def get_sabbatical_admin_access(email):
 
     email_lower = email.lower()
 
-    # 1. Check if network-level admin (C-Team, HR, kfeil)
-    if email_lower in [e.lower() for e in SABBATICAL_NETWORK_ADMINS]:
+    # 1. Check team inbox exceptions (shared accounts without BigQuery profiles)
+    if email_lower in [e.lower() for e in SABBATICAL_ADMIN_EXCEPTIONS]:
         return {'level': 'network'}
 
-    # 2. Check job title for C-Team or school leader access
+    # 2. Check job title for network admin or school leader access
     try:
         query = f"""
         SELECT Job_Title, Location_Name
@@ -127,16 +125,16 @@ def get_sabbatical_admin_access(email):
         results = list(bq_client.query(query, job_config=job_config).result())
 
         if results:
-            job_title = (results[0].Job_Title or '').lower()
+            job_title = results[0].Job_Title or ''
             location = results[0].Location_Name or ''
 
-            # Check if C-Team (Chief or Executive Director)
-            if 'chief' in job_title or 'ex dir' in job_title or 'executive dir' in job_title:
+            # Check if title is in the network admin list
+            if job_title in SABBATICAL_NETWORK_ADMIN_TITLES:
                 return {'level': 'network'}
 
             # Check if job title matches school leader patterns
             for leader_title in SABBATICAL_SCHOOL_LEADER_TITLES:
-                if leader_title in job_title:
+                if leader_title in job_title.lower():
                     return {'level': 'school', 'school': location}
     except Exception as e:
         logger.error(f"Error checking sabbatical admin access: {e}")
@@ -927,7 +925,7 @@ def lookup_applications():
         return jsonify({'error': 'Authentication required. Please sign in to view your application status.'}), 401
 
     user_email = user.get('email', '').lower()
-    is_admin = user.get('is_admin') or user_email in [e.lower() for e in ADMIN_USERS]
+    is_admin = user.get('is_admin') or (get_sabbatical_admin_access(user_email)['level'] != 'none')
 
     email = request.args.get('email', '').lower().strip()
 
@@ -1371,7 +1369,7 @@ def get_my_sabbatical():
     # Check if admin or supervisor is viewing another employee's sabbatical
     requested_email = request.args.get('email', '').lower()
     user_email = user.get('email', '').lower()
-    is_admin = user.get('is_admin') or user_email in [e.lower() for e in ADMIN_USERS]
+    is_admin = user.get('is_admin') or (get_sabbatical_admin_access(user_email)['level'] != 'none')
 
     if requested_email and requested_email != user_email:
         # Check if user is admin OR a supervisor of the requested employee
@@ -1598,7 +1596,7 @@ def update_checklist_item(task_id):
     # Also allow managers/HR to update for any sabbatical they can access
     if not application_id:
         # Check if admin/HR
-        if email in [e.lower() for e in ADMIN_USERS]:
+        if get_sabbatical_admin_access(email)['level'] != 'none':
             # Get application_id from query param
             application_id = request.args.get('application_id')
 
@@ -2950,11 +2948,13 @@ def auth_callback():
 
         if user_info:
             email = user_info.get('email', '').lower()
+            access = get_sabbatical_admin_access(email)
             session['user'] = {
                 'email': user_info.get('email'),
                 'name': user_info.get('name'),
                 'picture': user_info.get('picture'),
-                'is_admin': email in [e.lower() for e in ADMIN_USERS]
+                'is_admin': access['level'] != 'none',
+                'admin_access': access,
             }
 
         # Redirect back to where the user came from
