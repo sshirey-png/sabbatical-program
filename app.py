@@ -62,7 +62,6 @@ SABBATICAL_NETWORK_ADMINS = [
     'hr@firstlineschools.org',
     'awatts@firstlineschools.org',
     'jlombas@firstlineschools.org',
-    'tcole@firstlineschools.org',
     # Academic Leadership
     'kfeil@firstlineschools.org',        # ExDir of Teaching and Learning
 ]
