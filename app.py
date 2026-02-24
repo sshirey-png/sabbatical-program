@@ -59,12 +59,16 @@ SABBATICAL_NETWORK_ADMIN_TITLES = [
     'ExDir of Teach and Learn',
     'Talent Operations Manager',
     'Recruitment Manager',
+    'Manager Payroll',
+    'Manager Benefits',
 ]
 
 # Team inbox exceptions — shared accounts without BigQuery profiles
 SABBATICAL_ADMIN_EXCEPTIONS = [
     'talent@firstlineschools.org',
     'hr@firstlineschools.org',
+    'benefits@firstlineschools.org',
+    'payroll@firstlineschools.org',
 ]
 
 # Job titles that grant school-level admin access (can see their school's applications)
