@@ -49,11 +49,10 @@ PAYROLL_EMAIL = 'payroll@firstlineschools.org'
 CEO_EMAIL = 'spence@firstlineschools.org'
 
 # Network admin access by job title (from BigQuery staff_master_list_with_function)
-# C-Team titles use a contains-match ("Chief" or "Ex. Dir"), same as staffing board
-SABBATICAL_C_TEAM_KEYWORDS = ['Chief', 'Ex. Dir']
+# C-Team titles use a contains-match ("Chief" or "ExDir"), same as staffing board
+SABBATICAL_C_TEAM_KEYWORDS = ['Chief', 'ExDir']
 # Additional titles that get network admin access beyond C-Team
 SABBATICAL_NETWORK_ADMIN_TITLES = [
-    'ExDir of Teach and Learn',
     'Talent Operations Manager',
     'Recruitment Manager',
     'Manager Payroll',
