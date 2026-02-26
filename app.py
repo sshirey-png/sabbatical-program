@@ -49,13 +49,10 @@ PAYROLL_EMAIL = 'payroll@firstlineschools.org'
 CEO_EMAIL = 'spence@firstlineschools.org'
 
 # Network admin access by job title (from BigQuery staff_master_list_with_function)
+# C-Team titles use a contains-match ("Chief" or "Ex. Dir"), same as staffing board
+SABBATICAL_C_TEAM_KEYWORDS = ['Chief', 'Ex. Dir']
+# Additional titles that get network admin access beyond C-Team
 SABBATICAL_NETWORK_ADMIN_TITLES = [
-    'Chief People Officer',
-    'Chief Executive Officer',
-    'Chief HR Officer',
-    'Chief Experience Officer',
-    'Chief Operating Officer',
-    'Chief Strat Adv Officer',
     'ExDir of Teach and Learn',
     'Talent Operations Manager',
     'Recruitment Manager',
@@ -133,7 +130,13 @@ def get_sabbatical_admin_access(email):
             job_title = results[0].Job_Title or ''
             location = results[0].Location_Name or ''
 
-            # Check if title is in the network admin list
+            # Check if title matches C-Team keywords (contains-match)
+            title_lower = job_title.lower()
+            for keyword in SABBATICAL_C_TEAM_KEYWORDS:
+                if keyword.lower() in title_lower:
+                    return {'level': 'network'}
+
+            # Check if title is in the explicit network admin list
             if job_title in SABBATICAL_NETWORK_ADMIN_TITLES:
                 return {'level': 'network'}
 
