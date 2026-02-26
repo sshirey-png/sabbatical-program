@@ -61,6 +61,7 @@ SABBATICAL_NETWORK_ADMIN_TITLES = [
     'Recruitment Manager',
     'Manager Payroll',
     'Manager - Benefits',
+    'Manager, HR',
 ]
 
 # Team inbox exceptions — shared accounts without BigQuery profiles
