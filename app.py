@@ -977,7 +977,7 @@ def lookup_staff():
 
     # Look up staff in staff_master_list_with_function
     try:
-        query = """
+        query = f"""
         SELECT
             First_Name,
             Last_Name,
