@@ -54,7 +54,6 @@ SABBATICAL_C_TEAM_KEYWORDS = ['Chief', 'ExDir']
 # Additional titles that get network admin access beyond C-Team
 SABBATICAL_NETWORK_ADMIN_TITLES = [
     'Talent Operations Manager',
-    'Recruitment Manager',
     'Manager Payroll',
     'Manager - Benefits',
     'Manager, HR',
